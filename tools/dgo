@@ -1,0 +1,11 @@
+#!/bin/bash
+# Run a command with Go in the golang:1.27 image, as the current user, in the current directory.
+# Usage: dgo 'go build ./... && go test ./pkg/...'
+# The whole workspace is mounted at the same path, so ../api style replace lines work.
+# Go module and build caches are shared with the host (~/go/pkg/mod, ~/.cache/go-build).
+exec docker run --rm --user "$(id -u):$(id -g)" --network host \
+  -e HOME=/tmp/home -e GOPATH=/go -e GOMODCACHE=/gomod -e GOCACHE=/gocache \
+  -e GOTOOLCHAIN=local -e GOFLAGS="${GOFLAGS:-}" \
+  -v /home/ssijbabu/Documents/repos/ocm:/home/ssijbabu/Documents/repos/ocm \
+  -v "$HOME/go/pkg/mod:/gomod" -v "$HOME/.cache/go-build:/gocache" \
+  -w "$PWD" golang:1.27 bash -c 'mkdir -p /tmp/home; export PATH=$PATH:/go/bin; '"$*"
