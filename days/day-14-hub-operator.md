@@ -42,6 +42,13 @@ Fill them in the controller from the `spiffe` driver and the `grpc-spiffe` endpo
 `helpers.SPIFFEAuthEnabled(cm)` next to `helpers.GRPCAuthEnabled(cm)`, and make the gRPC server
 Deployment render when either is true.
 
+Also validate here what the CRD can't (see `plan/questions.md`, Q4): if `serverSPIFFEID` is set
+and not in `trustDomain`, render nothing for SPIFFE and set `Degraded=True` with reason
+`InvalidSPIFFEConfiguration` and message `serverSPIFFEID <id> is not in trust domain <td>`. Parse
+both with go-spiffe (`spiffeid.FromString`, then compare `TrustDomain()`), not with string
+prefixes, so `spiffe://ocm-hub.example.org.evil/...` is refused. Add both cases to the Task 5
+table.
+
 ## Task 2: the Deployment
 
 **Change** `deployment.yaml` (only the parts that differ):

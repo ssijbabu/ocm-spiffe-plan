@@ -121,6 +121,14 @@ type SPIFFERegistrationConfig struct {
 
 The trust-domain pattern follows the SPIFFE spec: lowercase letters, digits, `.`, `-` and `_`.
 
+**Found while implementing (2026-11-11):** the `XValidation` rule above can't be used. The CRD
+fails to install with `estimated rule cost exceeds budget by factor of 5.0x`, because
+`registrationDrivers` has no `maxItems`. Lowering `maxLength` doesn't help. The implemented version
+drops that rule; the cluster-manager operator checks the trust domain instead (Day 14, and
+`plan/questions.md` Q4). The cheap rule on `RegistrationDriverHub`
+(`self.authType != 'spiffe' || has(self.spiffe)`) stays. `make verify` runs `git diff --exit-code`
+after regenerating, so run it after committing.
+
 ## Task 3: allow `grpc-spiffe` endpoint exposure
 
 **Input:** `EndpointExposure` in the same file.
