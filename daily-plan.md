@@ -89,36 +89,46 @@ released versions before the final PRs merge.
 
 ### Day 2: API, ClusterManager and feature gate (`api`)
 
-- [ ] Add the `SPIFFERegistration` feature gate (`feature/`).
-- [ ] Add `authType: spiffe` and the `spiffe` block to the ClusterManager registration drivers
+Done: api `aaceeb2d` and `c77b5174`.
+
+- [x] Add the `SPIFFERegistration` feature gate (`feature/`).
+- [x] Add `authType: spiffe` and the `spiffe` block to the ClusterManager registration drivers
       (`operator/v1/types_clustermanager.go`):
-  - `trustDomain`, required;
+  - `trustDomain`, required: the hub's own trust domain;
+  - `agentTrustDomains`, optional: the trust domains the hub accepts agents from (empty means
+    only `trustDomain`; the operator fills it);
   - `serverSPIFFEID`, `workloadAPISocket`, `maxSVIDLifetime` (default `24h`) and `maxClockSkew`
     (default `5m`), optional.
-- [ ] Add `protocol: grpc-spiffe` to `endpointsExposure`.
-- [ ] Add CEL or OpenAPI validation: `trustDomain` is a valid SPIFFE trust domain, and
-      `serverSPIFFEID` is in it.
-- [ ] Run `make update` (codegen and CRDs).
+- [x] Add `protocol: grpc-spiffe` to `endpointsExposure`.
+- [x] Validate that `trustDomain` and each agent trust domain are valid, and that `serverSPIFFEID`
+      is a SPIFFE ID. That `serverSPIFFEID` is in `trustDomain` can't be a CEL rule (cost budget,
+      see `questions.md` Q4); the operator checks it on Day 14.
+- [x] Run `make update` (codegen and CRDs).
 
 **Done when:** `make verify` passes, and integration tests in `test/integration/api` cover valid
 and invalid ClusterManager specs.
 
 ### Day 3: API, Klusterlet and add-on (`api`)
 
-- [ ] Add `authType: spiffe` with `hubEndpoint`, `hubSPIFFEID` and `workloadAPISocket` to the
-      Klusterlet (`operator/v1/types_klusterlet.go`).
-- [ ] Add `addOnKubeClientRegistrationDriver.authType: spiffe`. It is required when
-      `registrationDriver.authType` is `spiffe`; add a CEL rule for that.
-- [ ] Add the Klusterlet status field `status.spiffe.admissionPolicy`: `policyUID`,
-      `policyGeneration`, `bindingUID` and `bindingGeneration`.
-- [ ] Add the Klusterlet status field `status.spiffe.addOnNamespace`: `name` and `uid`.
-- [ ] Add the condition type constant `SPIFFEAdmissionReady`.
-- [ ] Allow `spiffe` as a value of `status.registrations[].kubeClient.driver` in the
-      `ManagedClusterAddOn` (`addon/v1beta1`).
-- [ ] Run `make update` and `make verify`.
+Done: api `a770a061` and `c77b5174`, pushed to `fork/spire`. The upstream draft PR is not opened
+yet.
 
-**Done when:** API integration tests pass, the commit is pushed to the fork, and the `api` PR is
-opened as a draft.
+- [x] Add `authType: spiffe` with `hubEndpoint`, `hubSPIFFEID`, `trustDomain` (the agents' own,
+      default: the trust domain of `hubSPIFFEID`) and `workloadAPISocket` to the Klusterlet
+      (`operator/v1/types_klusterlet.go`).
+- [x] Add `addOnKubeClientRegistrationDriver.authType: spiffe`. It is required when
+      `registrationDriver.authType` is `spiffe`; CEL rule added.
+- [x] Add the Klusterlet status `status.spiffe.admissionPolicies`: a list keyed by `policyName`,
+      each with `policyUID`, `policyGeneration`, `bindingUID` and `bindingGeneration` (a list,
+      because recovery tracks three policies).
+- [x] Add the Klusterlet status field `status.spiffe.addOnNamespace`: `name` and `uid`.
+- [x] Add the condition type constant `SPIFFEAdmissionReady`.
+- [x] Add the ManagedCluster annotation constant `open-cluster-management.io/spiffe-trust-domain`.
+- [x] Allow `spiffe` as the add-on driver in `ManagedClusterAddOn` `v1beta1` and `v1alpha1`.
+- [x] Run `make update` and `make verify` (lint with `DGO_IMAGE=golang:1.26`).
+
+**Done when:** API integration tests pass (202 of 202), the commit is pushed to the fork, and the
+`api` PR is opened as a draft.
 
 ### Day 4: SPIFFE ID mapping (`sdk-go`, `pkg/server/grpc/authn`)
 
@@ -129,11 +139,15 @@ opened as a draft.
   - `.../ocm/cluster/<cluster>/addon/<addon>/agent/<agent>`.
 - [ ] Map each ID to the user and groups in the proposal's ID-scheme table, plus
       `system:authenticated`.
-- [ ] Reject IDs from another trust domain, unknown paths, empty segments and extra segments.
+- [ ] Accept IDs from any trust domain in `agentTrustDomains`, and return the SVID's trust domain
+      with the identity (used for pinning on Day 11).
+- [ ] Reject IDs from a trust domain not in `agentTrustDomains`, unknown paths, empty segments and
+      extra segments.
 - [ ] Write table tests for every valid and invalid form.
 
-**Done when:** the tests cover every row of the proposal's mapping table, and both the wrong trust
-domain and a path like `.../ocm/something-else` are rejected.
+**Done when:** the tests cover every row of the proposal's mapping table; an ID from
+`east.example.org` is accepted when listed; and an unlisted trust domain and a path like
+`.../ocm/something-else` are rejected.
 
 ### Day 5: SPIFFE authenticator (`sdk-go`, `pkg/server/grpc/authn`)
 
@@ -175,7 +189,9 @@ it, and see the new one.
 
 ### Day 8: server TLS and connection registry (`sdk-go`, `pkg/server/grpc`)
 
-- [ ] Add server TLS from `tlsconfig.MTLSServerConfig`, with `AuthorizeMemberOf(trustDomain)`.
+- [ ] Add server TLS from `tlsconfig.MTLSServerConfig`, with an authorizer that accepts any trust
+      domain in `agentTrustDomains` (`authorizeMemberOfAny`), not just the hub's.
+- [ ] Have the registry also close every connection of one trust domain (`CloseTrustDomain`).
 - [ ] Add a `TransportCredentials` wrapper. After each handshake it records the peer's SPIFFE ID
       and SVID expiry, and registers the `net.Conn` in a connection registry.
 - [ ] Have the registry arm a timer that closes the `net.Conn` when the SVID expires.
@@ -204,6 +220,7 @@ and open the `sdk-go` PR as a draft.
       authenticator. It has no CSR or token-request services.
 - [ ] When `grpc` is also listed, keep that listener unchanged on its current port.
 - [ ] Have both listeners share the same CloudEvents services and authorizer.
+- [ ] Add `--spiffe-agent-trust-domains` (default: the hub's trust domain) for the SPIFFE listener.
 
 **Done when:** the hub starts with only `spiffe`, and with `spiffe` plus `grpc`, and
 `go build ./...` passes.
@@ -217,8 +234,15 @@ and open the `sdk-go` PR as a draft.
 - [ ] For add-on agents, also check the add-on name: the agent of `my-addon` cannot touch
       `other-addon`.
 - [ ] Send the mapped groups, including `system:authenticated`, in the SubjectAccessReviews.
+- [ ] Pin each cluster to one trust domain: the gRPC cluster service sets
+      `open-cluster-management.io/spiffe-trust-domain` from the SVID when the cluster is created
+      and keeps it on agent updates; every request is refused unless the SVID's trust domain
+      matches it. Without the annotation, one agent trust domain means pinned to it; several mean
+      refused until an admin sets it.
 
-**Done when:** unit tests cover cross-cluster and cross-add-on attempts, and both are refused.
+**Done when:** unit tests cover cross-cluster and cross-add-on attempts, and both are refused, and
+an SVID for cluster2 from `west.example.org` is refused when cluster2 is pinned to
+`east.example.org`.
 
 ### Day 12: revocation (`ocm`, `pkg/server/grpc`)
 
@@ -385,10 +409,13 @@ an add-on. Push the change and open the `ocm` PR as a draft.
 
 ### Day 24: clusteradm (`clusteradm`, `pkg/cmd/init`, `join` and `accept`)
 
-- [ ] `init`: add `--registration-drivers spiffe` and `--spiffe-trust-domain`.
-- [ ] `join`: add `--registration-auth spiffe`, `--hub-grpc-endpoint` and `--hub-spiffe-id`, with
-      no token. Wait for `SPIFFEAdmissionReady` and say so.
-- [ ] `accept`: no CSR to approve in `spiffe` mode.
+- [ ] `init`: add `--registration-drivers spiffe`, `--spiffe-trust-domain` and
+      `--spiffe-agent-trust-domains`.
+- [ ] `join`: add `--registration-auth spiffe`, `--hub-grpc-endpoint`, `--hub-spiffe-id` and
+      `--spiffe-trust-domain` (the agents' own), with no token. Wait for `SPIFFEAdmissionReady`
+      and say so.
+- [ ] `accept`: no CSR to approve in `spiffe` mode. `--spiffe-trust-domain` confirms the
+      cluster's pinned trust domain, or sets it when missing.
 - [ ] Make `--singleton` and `--mode hosted` work with `spiffe`.
 
 **Done when:** unit tests cover flag validation and the rendered Klusterlet for each mode. Open the
@@ -411,10 +438,12 @@ an add-on. Push the change and open the `ocm` PR as a draft.
       0.6.1 and `spire` 0.30.4, matching ocm-hub.
 - [ ] Use `ClusterSPIFFEID`s for the gRPC server, the agents and one add-on, following the
       proposal's examples.
-- [ ] Use one trust domain. This is open question 4: pick the reference SPIRE topology here and
-      record it.
+- [ ] Cover both cases: a spoke in the hub's trust domain, and a spoke in its own trust domain
+      (`east.example.org`) federated with the hub's. This is open question 4: pick the reference
+      SPIRE topology here and record it.
 
-**Done when:** a hub and a managed cluster come up with SPIRE, and an agent pod gets its SVID.
+**Done when:** a hub and two managed clusters come up with SPIRE, the federated one sees the hub's
+bundle, and an agent pod on each gets its SVID.
 
 ### Day 27: e2e, Default and Singleton
 

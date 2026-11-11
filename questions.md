@@ -11,8 +11,8 @@ Open points found while implementing. Tick them when answered, and say where.
       exceeds the CRD validation cost budget (5x). Adding `maxItems` would change an existing
       upstream field. Decision: the pattern checks it is a SPIFFE ID; the cluster-manager operator
       checks the trust domain and sets `Degraded` (added to Day 14).
-- [x] Q5 (Day 3): same cost limit may hit CEL rules on the Klusterlet. **No**: `registrationConfiguration`
-      is not a list there, so it should be fine; confirm when the CRD installs.
+- [x] Q5 (Day 3): does the same cost limit hit CEL rules on the Klusterlet? **No.** `registrationConfiguration`
+      is not a list there; the CRD installs and the rules work (api `a770a061`).
 
 ## Baseline (Day 1, 2026-11-11)
 
