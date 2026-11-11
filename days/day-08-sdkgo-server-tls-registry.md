@@ -204,3 +204,7 @@ connection when the SVID expires or when asked to close a cluster or add-on."
 
 - [ ] The server's SVID comes from the Workload API; no certificate files in `spiffe` mode.
 - [ ] Connections can't outlive the SVID they were opened with.
+
+## Update: multiple agent trust domains
+
+Server TLS uses `tlsconfig.MTLSServerConfig(src, src, authorizeMemberOfAny(agentTrustDomains))` instead of `AuthorizeMemberOf(td)`; write `authorizeMemberOfAny` as a small `tlsconfig.Authorizer`. Even if the hub's SPIRE federates with more domains, only listed ones get in. The registry also needs `CloseTrustDomain(td)` for when a domain is removed from the list.

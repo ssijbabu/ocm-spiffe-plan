@@ -170,3 +170,7 @@ git add -A && git commit -s -m ":sparkles: pick SVIDs by ID and dial the hub wit
 
 - [ ] The SVID and key exist only in memory (inside `X509Source`); nothing is written to disk.
 - [ ] The client accepts only the configured hub ID, not any ID in the trust domain.
+
+## Update: multiple agent trust domains
+
+The agent's own ID is built in the Klusterlet's `trustDomain`, while `hubSPIFFEID` stays in the hub's domain. The client's bundle source must hold the hub's trust bundle too: with federation, the SPIRE agent delivers federated bundles over the Workload API (`X509Source` serves them). Add a test with two CAs: agent in `east.example.org`, hub in `ocm-hub.example.org`.

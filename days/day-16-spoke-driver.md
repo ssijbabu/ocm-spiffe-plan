@@ -154,3 +154,7 @@ git add -A && git commit -s -m ":sparkles: add the spiffe registration driver fo
 
 - [ ] No bootstrap Secret, no CSR, no `hub-kubeconfig-secret`.
 - [ ] The agent talks only to the hub endpoint and the local Workload API.
+
+## Update: multiple agent trust domains
+
+`Option.TrustDomain` comes from the Klusterlet's `spiffe.trustDomain` (flag `--spiffe-trust-domain`), defaulting to the trust domain of `--spiffe-hub-id`. `AgentID` uses it, so cluster2's registration agent expects `spiffe://east.example.org/ocm/cluster/cluster2/agent/registration`.

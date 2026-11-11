@@ -148,3 +148,7 @@ git add test/e2e/spiffe && git commit -s -m ":seedling: kind + SPIRE environment
 | --- | --- |
 | `setup.sh`, values files, entries | a fresh run ends with the smoke test printing the expected SPIFFE ID |
 | Topology decision | written down |
+
+## Update: multiple agent trust domains
+
+For the multi-trust-domain case, run the spoke's SPIRE in its own trust domain (`east.example.org`) and federate it with the hub's (`ClusterFederatedTrustDomain` on both sides, `federatesWith` in the `ClusterSPIFFEID`s). Keep one same-domain spoke as well.

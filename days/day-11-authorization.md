@@ -150,3 +150,13 @@ dgo 'go test ./pkg/server/grpc/... -run CrossCluster -v' 2>&1 | grep -E '^(--- |
 
 - [ ] An agent can never act for another cluster or add-on, even with a valid SVID.
 - [ ] No CSR or token path exists on the SPIFFE listener.
+
+## Update: multiple agent trust domains
+
+Add trust domain pinning (by-mode proposal, "Trust domain pinning"):
+
+1. The gRPC cluster service (`pkg/server/services/cluster`) sets `open-cluster-management.io/spiffe-trust-domain: <SVID's trust domain>` when an agent creates its ManagedCluster, replacing any value in the request, and keeps it on agent updates (same pattern as the cluster-set label in `cluster.go`).
+2. Every SPIFFE request is refused unless the SVID's trust domain equals the cluster's annotation.
+3. No annotation: if `agentTrustDomains` has one entry, treat the cluster as pinned to it; with several, refuse until an admin sets it.
+
+Test rows: cluster2 pinned to `east.example.org`; an SVID `spiffe://west.example.org/ocm/cluster/cluster2/agent/work` is refused, and so is an agent trying to change the annotation.

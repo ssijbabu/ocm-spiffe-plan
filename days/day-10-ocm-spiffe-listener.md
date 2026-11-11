@@ -201,3 +201,7 @@ CloudEvents services and authorizer."
 
 - [ ] SPIFFE listener: no token authenticator, no OCM-signed certificate, no CSR or token service.
 - [ ] The server's SVID comes only from the local Workload API.
+
+## Update: multiple agent trust domains
+
+Add the flag `--spiffe-agent-trust-domains` (comma separated; default: the hub's trust domain), passed to the authenticator and server TLS.

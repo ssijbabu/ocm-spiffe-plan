@@ -118,3 +118,7 @@ dgo 'go test ./test/e2e/... -run SPIFFE -timeout 90m -v' 2>&1 | tee ../plan/e2e-
 ```shell
 git add -A && git commit -s -m ":white_check_mark: e2e for SPIFFE registration in Default and Singleton modes"
 ```
+
+## Update: multiple agent trust domains
+
+Add rows: cluster2 in `east.example.org` joins and works; its pinned annotation is set; an SVID for cluster2 from `west.example.org` is refused; removing `east.example.org` from `agentTrustDomains` disconnects cluster2.

@@ -159,3 +159,7 @@ gh pr create -R open-cluster-management-io/clusteradm --draft --head ssijbabu:sp
 
 - [ ] No token or bootstrap Secret is created or printed.
 - [ ] All four modes work.
+
+## Update: multiple agent trust domains
+
+`init` gets `--spiffe-agent-trust-domains` (sets `agentTrustDomains`), `join` gets `--spiffe-trust-domain` (sets the Klusterlet's `trustDomain`), and `accept` gets `--spiffe-trust-domain`, which refuses to accept a cluster whose annotation differs, and sets it when it is missing.

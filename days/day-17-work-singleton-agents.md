@@ -108,3 +108,7 @@ git add -A && git commit -s -m ":sparkles: work and singleton agents connect wit
 
 - [ ] The work agent doesn't read anything written by the registration agent.
 - [ ] Each agent presents only its own role's SVID.
+
+## Update: multiple agent trust domains
+
+The work and singleton agents also take `--spiffe-trust-domain` and build their IDs in it.

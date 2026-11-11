@@ -11,7 +11,7 @@ Open points found while implementing. Tick them when answered, and say where.
       exceeds the CRD validation cost budget (5x). Adding `maxItems` would change an existing
       upstream field. Decision: the pattern checks it is a SPIFFE ID; the cluster-manager operator
       checks the trust domain and sets `Degraded` (added to Day 14).
-- [ ] Q5 (Day 3): same cost limit may hit CEL rules on the Klusterlet. `registrationConfiguration`
+- [x] Q5 (Day 3): same cost limit may hit CEL rules on the Klusterlet. **No**: `registrationConfiguration`
       is not a list there, so it should be fine; confirm when the CRD installs.
 
 ## Baseline (Day 1, 2026-11-11)
@@ -27,3 +27,8 @@ Open points found while implementing. Tick them when answered, and say where.
 
 Heads at baseline: api `08ef6f77`, sdk-go `fb8d1d0f`, ocm `23f2c4deb`, clusteradm `f02a8843`,
 addon-framework `main` at clone time.
+
+- [ ] Q6 (2026-11-11): multiple agent trust domains were in the `spire-impl-by-mode` version of
+      the proposal but not in `spire` (PR #203), so Days 2-3 first missed `agentTrustDomains`.
+      Added to the API in api `c77b5174`, and to the affected day documents ("Update: multiple
+      agent trust domains"). The proposal on `spire` still describes one trust domain.

@@ -245,3 +245,7 @@ git rev-parse HEAD   # e.g. 4f2a9c1e...
 
 - [ ] The Klusterlet spec has no bootstrap Secret reference for `spiffe`.
 - [ ] Status holds only UIDs, generations and names; nothing secret.
+
+## Update: multiple agent trust domains
+
+Done in api `c77b5174`: Klusterlet `spiffe.trustDomain` (optional; default is the trust domain of `hubSPIFFEID`), and the ManagedCluster annotation constant `clusterv1.SPIFFETrustDomainAnnotationKey` (`open-cluster-management.io/spiffe-trust-domain`).

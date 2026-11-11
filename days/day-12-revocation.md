@@ -143,3 +143,7 @@ git add -A && git commit -s -m ":sparkles: close SPIFFE connections on cluster d
 ## Rules check
 
 - [ ] Revocation needs no SPIRE call: OCM only closes connections and refuses requests.
+
+## Update: multiple agent trust domains
+
+Removing a trust domain from `agentTrustDomains` closes every connection from that domain (`Registry.CloseTrustDomain`) and refuses new ones at TLS.

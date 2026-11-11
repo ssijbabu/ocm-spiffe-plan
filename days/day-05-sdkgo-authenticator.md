@@ -225,3 +225,7 @@ git add -A && git commit -s -m ":sparkles: add SPIFFE authenticator and SVID exp
 - [ ] The authenticator only reads the SVID the TLS layer verified; it doesn't load any key or
       certificate file.
 - [ ] Expired SVIDs are refused.
+
+## Update: multiple agent trust domains
+
+`NewSPIFFEAuthenticator` takes the accepted trust domain set. The OCM user and groups don't change with the trust domain (cluster2 in `east.example.org` is still `system:open-cluster-management:cluster2:work`), so the pinning check on Day 11 is what stops one domain acting for another's cluster.

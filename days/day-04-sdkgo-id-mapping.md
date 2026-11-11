@@ -240,3 +240,7 @@ and any other path."
 
 - [ ] Mapping matches the proposal's table exactly, including `system:authenticated`.
 - [ ] The hub's own ID can't be used as a client identity.
+
+## Update: multiple agent trust domains
+
+`ParseAgentID` takes the set of accepted trust domains (`agentTrustDomains`) instead of one, and returns the SVID's trust domain in `OCMIdentity.TrustDomain`. Test rows: an ID from `east.example.org` is accepted when it is in the set; `south.example.org` is refused with `not in agentTrustDomains`.

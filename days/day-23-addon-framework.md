@@ -174,3 +174,7 @@ gh pr create -R open-cluster-management-io/addon-framework --draft --head ssijba
 
 - [ ] Add-on agents get no Secret; each has its own SVID.
 - [ ] The add-on namespace is labeled at creation, never later.
+
+## Update: multiple agent trust domains
+
+The helper takes the agent's trust domain (the cluster's pinned one), not the trust domain of `HubSPIFFEID`.

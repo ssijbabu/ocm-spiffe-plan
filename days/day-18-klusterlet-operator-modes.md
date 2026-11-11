@@ -167,3 +167,7 @@ spec:
 
 - [ ] No bootstrap or hub-kubeconfig Secret in any of the four modes.
 - [ ] Every agent pod has the role label that matches its ServiceAccount.
+
+## Update: multiple agent trust domains
+
+Render `--spiffe-trust-domain={{ .SPIFFETrustDomain }}` for every agent. In hosted modes it is the management cluster's trust domain, because the agents get their SVIDs there.

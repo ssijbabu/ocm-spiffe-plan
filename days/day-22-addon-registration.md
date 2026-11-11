@@ -152,3 +152,7 @@ The replace lines in go.mod are temporary."
 
 - [ ] No add-on credential of any kind is created on the spoke.
 - [ ] A subject an SVID can't carry is reported, not silently ignored.
+
+## Update: multiple agent trust domains
+
+Add-on agents must be in the trust domain their cluster is pinned to. In hosted modes that is the management cluster's: a hosted add-on on the management cluster is in it; an add-on agent on the managed cluster itself is accepted only if that cluster's SPIRE is also in that trust domain.

@@ -198,3 +198,7 @@ No `grpc-server-serving-cert` Secret, no `cluster-manager-grpc-server` Service.
 - [ ] SPIFFE-only creates no Secret or ConfigMap with keys, certificates or tokens.
 - [ ] Hosted cluster-manager mode still mounts `grpc-server-sa-kubeconfig` to reach the hub
       kube-apiserver. That's the hub's own API access, not an agent credential; note it in the PR.
+
+## Update: multiple agent trust domains
+
+Pass `--spiffe-agent-trust-domains` to the gRPC server from `agentTrustDomains`, defaulting to `[trustDomain]` when empty. Test rows: three domains rendered in order; empty list renders the hub's domain.

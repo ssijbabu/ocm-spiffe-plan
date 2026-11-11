@@ -280,3 +280,7 @@ in: `serverSPIFFEID` stays empty (the operator computes it), `workloadAPISocket`
 
 - [ ] No field holds a key, certificate or token.
 - [ ] Everything is behind `SPIFFERegistration`.
+
+## Update: multiple agent trust domains
+
+Done in api `c77b5174`: `agentTrustDomains` (list, `listType=set`, max 64, each a trust domain). Empty means only `trustDomain`; the operator fills the default, since a CRD default can't copy another field.
