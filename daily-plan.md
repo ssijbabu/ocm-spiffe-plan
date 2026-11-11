@@ -89,7 +89,7 @@ released versions before the final PRs merge.
 
 ### Day 2: API, ClusterManager and feature gate (`api`)
 
-Done: api `aaceeb2d` and `c77b5174`.
+Done: api `aaceeb2d`, `c77b5174` and `4d9027ee`.
 
 - [x] Add the `SPIFFERegistration` feature gate (`feature/`).
 - [x] Add `authType: spiffe` and the `spiffe` block to the ClusterManager registration drivers
