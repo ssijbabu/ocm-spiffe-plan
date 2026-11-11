@@ -205,3 +205,5 @@ CloudEvents services and authorizer."
 ## Update: multiple agent trust domains
 
 Add the flag `--spiffe-agent-trust-domains` (comma separated; default: the hub's trust domain), passed to the authenticator and server TLS.
+
+Always get the accepted trust domains from `SPIFFERegistrationConfig.GetAgentTrustDomains()` (api `1fa143c5`). It adds the hub's own trust domain whether or not the admin listed it, so never read `AgentTrustDomains` directly.

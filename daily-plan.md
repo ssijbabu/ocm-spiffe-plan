@@ -89,7 +89,7 @@ released versions before the final PRs merge.
 
 ### Day 2: API, ClusterManager and feature gate (`api`)
 
-Done: api `aaceeb2d`, `c77b5174` and `4d9027ee`.
+Done: api `aaceeb2d`, `c77b5174`, `4d9027ee`, `1fa143c5` and `dddccc02`. The hub's own trust domain is always accepted (`GetAgentTrustDomains`); every new validation rule and helper is covered by tests.
 
 - [x] Add the `SPIFFERegistration` feature gate (`feature/`).
 - [x] Add `authType: spiffe` and the `spiffe` block to the ClusterManager registration drivers

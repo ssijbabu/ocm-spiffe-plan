@@ -202,3 +202,5 @@ No `grpc-server-serving-cert` Secret, no `cluster-manager-grpc-server` Service.
 ## Update: multiple agent trust domains
 
 Pass `--spiffe-agent-trust-domains` to the gRPC server from `agentTrustDomains`, defaulting to `[trustDomain]` when empty. Test rows: three domains rendered in order; empty list renders the hub's domain.
+
+Always get the accepted trust domains from `SPIFFERegistrationConfig.GetAgentTrustDomains()` (api `1fa143c5`). It adds the hub's own trust domain whether or not the admin listed it, so never read `AgentTrustDomains` directly.

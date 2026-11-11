@@ -305,6 +305,32 @@ webhook, so v1beta1-only registration details (`kubeClient`) come back empty. Th
 checks that the value is accepted, as the existing token-driver test does; the v1alpha1 test checks
 the stored value.
 
+
+**Every validation rule has a test.** For each rule on the new Klusterlet, status and add-on fields:
+
+| Field | Rule | Accepted case | Refused case |
+| --- | --- | --- | --- |
+| `RegistrationDriver` | CEL `has(self.spiffe)` | spiffe + settings | missing spiffe block |
+| `RegistrationConfiguration` | CEL add-on driver must be `spiffe` | spiffe + add-on `spiffe`; csr + add-on `spiffe` | add-on `csr`; no add-on driver; add-on driver without `authType` |
+| `hubEndpoint` | required, minLength 1 | set | empty |
+| `hubEndpoint` | maxLength 512 | | over 512 |
+| `hubSPIFFEID` | pattern | hub ID | `https://...` |
+| `hubSPIFFEID` | maxLength 512 | | over 512 |
+| `trustDomain` | optional | not set (stays empty) | |
+| `trustDomain` | pattern | `east.example.org` | `East_Example` |
+| `trustDomain` | maxLength 255 | | 256 characters |
+| `workloadAPISocket` | default | defaulted | |
+| add-on `authType` | enum adds `spiffe` | `spiffe` | |
+| `status.spiffe.admissionPolicies` | `listType=map` on `policyName` | two names | same name twice |
+| `status.spiffe.admissionPolicies` | maxItems 16 | 16 | 17 |
+| `policyName` | minLength 1, maxLength 253 | `ocm-spiffe-agents-klusterlet` | empty; 254 characters |
+| `addOnNamespace.name` | minLength 1, maxLength 63 | `open-cluster-management-agent-addon` | empty; 64 characters |
+| `ManagedClusterAddOn` v1beta1 `kubeClient.driver` | enum adds `spiffe` | `spiffe` | `spire` |
+| `ManagedClusterAddOn` v1alpha1 `kubeClientDriver` | enum adds `spiffe` | `spiffe` | (existing `invalid-driver` test) |
+
+`SPIFFETrustDomainAnnotationKey` and `ConditionSPIFFEAdmissionReady` are constants; the hub and
+operator code that uses them is tested on Days 11 and 21.
+
 **Run:**
 
 ```shell
@@ -314,8 +340,8 @@ dgo 'make test-api-integration' 2>&1 | tail -2
 **Output:**
 
 ```text
-Ran 202 of 202 Specs in 5.9 seconds
-SUCCESS! -- 202 Passed | 0 Failed | 0 Pending | 0 Skipped
+Ran 223 of 223 Specs in 5.6 seconds
+SUCCESS! -- 223 Passed | 0 Failed | 0 Pending | 0 Skipped
 ```
 
 ## Task 7: verify, commit, push, draft PR

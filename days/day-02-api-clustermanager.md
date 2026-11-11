@@ -1,7 +1,8 @@
 # Day 2: API, ClusterManager driver and feature gate
 
 **Status:** done. api commits `aaceeb2d` (driver and feature gate), `c77b5174` (agent trust
-domains), `4d9027ee` (comments), on `fork/spire`.
+domains), `4d9027ee` (comments), `1fa143c5` (hub's trust domain always accepted, full rule
+coverage), `dddccc02` (helper test), on `fork/spire`.
 
 **Goal:** the `ClusterManager` accepts `authType: spiffe` with its settings, including the trust
 domains it accepts agents from; the hub can expose a `grpc-spiffe` endpoint; and the
@@ -165,7 +166,7 @@ Field summary:
 | Field | Default | Purpose |
 | --- | --- | --- |
 | `trustDomain` | none (required) | The hub's own trust domain; the hub gRPC server's SVID is in it. |
-| `agentTrustDomains` | empty, meaning `[<trustDomain>]` | Trust domains whose Klusterlet and add-on agents the hub accepts. Any other trust domain is refused. Each cluster is pinned to one of them. |
+| `agentTrustDomains` | empty | Trust domains whose Klusterlet and add-on agents the hub accepts. The hub's own `trustDomain` is always accepted too, whether or not it is listed (`GetAgentTrustDomains`, Task 2b). Any other trust domain is refused. Each cluster is pinned to one of them. |
 | `serverSPIFFEID` | `spiffe://<trustDomain>/ocm/hub/grpc-server` (filled by the operator) | The SVID the hub gRPC server presents. |
 | `workloadAPISocket` | `unix:///spiffe-workload-api/spire-agent.sock` | The local SPIRE agent's Workload API. |
 | `maxSVIDLifetime` | `24h` | At least the longest SVID TTL in any agent trust domain; the delete guard waits this long. |
@@ -181,12 +182,70 @@ Notes from implementing:
   was dropped. The pattern still makes sure `serverSPIFFEID` is a SPIFFE ID, and the
   cluster-manager operator checks the trust domain (Day 14; `questions.md` Q4). The cheap rule on
   `RegistrationDriverHub` (`has(self.spiffe)`) costs nothing and stays.
-- **The `agentTrustDomains` default.** A CRD default can't copy another field, so it stays empty
-  in the stored object, and the operator treats empty as `[trustDomain]` (Day 14).
+- **The hub's trust domain in `agentTrustDomains`.** A CRD default can't copy another field, and
+  the ClusterManager has no defaulting webhook, so the stored list is never rewritten. Instead,
+  `GetAgentTrustDomains` (Task 2b) always adds the hub's trust domain, and every consumer uses it.
 - **Durations** follow the repo's existing pattern: `*metav1.Duration` with `Type=string` and a
   pattern. The stored value is the string you wrote (`24h`), and Go reads it as `24h0m0s`.
 - **Trust domain pattern:** lowercase letters, digits, `.`, `-` and `_`, as in the SPIFFE spec.
   `listType=set` makes the API server refuse duplicates in `agentTrustDomains`.
+
+## Task 2b: always accept the hub's own trust domain
+
+**Rule:** the admin may list the hub's own `trustDomain` in `agentTrustDomains` or leave it out.
+Either way the hub accepts agents from it.
+
+**Change (as committed, api `1fa143c5`)** in `operator/v1/funcs_clustermanager.go`:
+
+```go
+// GetAgentTrustDomains returns the trust domains the hub accepts agents from. The hub's own
+// trustDomain is always included and comes first, whether or not agentTrustDomains lists it;
+// the listed trust domains follow in their order, without duplicates or empty entries.
+// It returns nil for a nil config or an empty trustDomain.
+func (c *SPIFFERegistrationConfig) GetAgentTrustDomains() []string {
+	if c == nil || c.TrustDomain == "" {
+		return nil
+	}
+	domains := make([]string, 0, len(c.AgentTrustDomains)+1)
+	seen := make(map[string]bool, len(c.AgentTrustDomains)+1)
+	for _, td := range append([]string{c.TrustDomain}, c.AgentTrustDomains...) {
+		if td == "" || seen[td] {
+			continue
+		}
+		seen[td] = true
+		domains = append(domains, td)
+	}
+	return domains
+}
+```
+
+| `trustDomain` | `agentTrustDomains` (stored) | `GetAgentTrustDomains()` |
+| --- | --- | --- |
+| `ocm-hub.example.org` | not set | `[ocm-hub.example.org]` |
+| `ocm-hub.example.org` | `[ocm-hub.example.org, east, west]` | `[ocm-hub.example.org, east, west]` |
+| `ocm-hub.example.org` | `[east, west]` | `[ocm-hub.example.org, east, west]` (added) |
+| `ocm-hub.example.org` | `[east, ocm-hub.example.org]` | `[ocm-hub.example.org, east]` (moved first, once) |
+| empty | anything | `nil` |
+| nil config | | `nil` |
+
+The stored spec stays as the admin wrote it; the gRPC server (Day 10) and the operator (Day 14)
+call this function and never read `AgentTrustDomains` directly.
+
+**Unit tests:** `operator/v1/funcs_clustermanager_test.go`, one case per row above, plus a check
+that calling it doesn't change the spec. Coverage of the hand-written functions:
+
+```shell
+dgo 'go test ./operator/v1/ -coverprofile=/tmp/c.out >/dev/null && go tool cover -func=/tmp/c.out | grep funcs_'
+```
+
+```text
+open-cluster-management.io/api/operator/v1/funcs_clustermanager.go:4:   GetResourceRequirement  100.0%
+open-cluster-management.io/api/operator/v1/funcs_clustermanager.go:15:  GetAgentTrustDomains    100.0%
+open-cluster-management.io/api/operator/v1/funcs_klusterlet.go:4:       GetResourceRequirement  100.0%
+```
+
+The package total is about 1.5%: the rest of `operator/v1` is generated deepcopy code, which the
+repo doesn't unit-test.
 
 ## Task 3: allow `grpc-spiffe` endpoint exposure
 
@@ -305,6 +364,30 @@ var _ = Describe("ClusterManager API test with the spiffe registration driver", 
 | `grpc-spiffe` exposure | `protocol: grpc-spiffe`, `grpc.type: loadBalancer` | created |
 | unknown protocol | `protocol: grpc-other` | refused |
 
+
+**Every validation rule has a test.** For each rule on the new ClusterManager fields:
+
+| Field | Rule | Accepted case | Refused case |
+| --- | --- | --- | --- |
+| `authType` | enum adds `spiffe` | minimal driver | unknown protocol (enum on `protocol`) |
+| `RegistrationDriverHub` | CEL `has(self.spiffe)` | minimal driver | missing spiffe block |
+| `trustDomain` | required, minLength 1 | minimal driver | `trustDomain: ""` |
+| `trustDomain` | maxLength 255 | 255 characters | 256 characters |
+| `trustDomain` | pattern | `ocm-hub.example.org` | `OCM_Hub` |
+| `agentTrustDomains` | optional | not set | |
+| `agentTrustDomains` | `listType=set` | three distinct | `east` twice |
+| `agentTrustDomains` | maxItems 64 | 64 entries | 65 entries |
+| `agentTrustDomains` items | minLength 1 | | empty entry |
+| `agentTrustDomains` items | maxLength 255 | | 256 characters |
+| `agentTrustDomains` items | pattern | `east.example.org` | `West_Example` |
+| hub's own trust domain | always accepted | listed, left out, not set (checked with `GetAgentTrustDomains`) | |
+| `serverSPIFFEID` | pattern | `spiffe://ocm-hub.example.org/ocm/hub/grpc-server` | `https://...`, `spiffe://ocm-hub.example.org` (no path) |
+| `serverSPIFFEID` | maxLength 512 | | over 512 |
+| `workloadAPISocket` | default | defaulted | |
+| `maxSVIDLifetime` | default `24h`, pattern | defaulted; `1h` | `1.5s` |
+| `maxClockSkew` | default `5m`, pattern | defaulted; `1m` | `500ms` |
+| `protocol` | enum adds `grpc-spiffe` | `grpc-spiffe` | `grpc-other` |
+
 **Run:**
 
 ```shell
@@ -314,8 +397,8 @@ dgo 'make test-api-integration' 2>&1 | tail -3
 **Output (after Days 2 and 3):**
 
 ```text
-Ran 202 of 202 Specs in 5.9 seconds
-SUCCESS! -- 202 Passed | 0 Failed | 0 Pending | 0 Skipped
+Ran 223 of 223 Specs in 5.6 seconds
+SUCCESS! -- 223 Passed | 0 Failed | 0 Pending | 0 Skipped
 ```
 
 The baseline had 174 specs.
