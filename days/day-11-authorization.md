@@ -170,3 +170,7 @@ the namespace template from Day 4 to show `Namespace` has no effect: cluster1's 
 not touch cluster2's.
 
 **Rule:** never authorize on `OCMIdentity.Namespace`. The hub can't verify it.
+
+## Status (2026-11-13)
+
+Done, committed locally. See "Progress (Days 10-23)" in `questions.md` for the commit and findings.

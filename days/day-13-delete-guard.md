@@ -139,3 +139,7 @@ until deletionTimestamp + maxSVIDLifetime + maxClockSkew."
 - [ ] OCM doesn't contact SPIRE; it only waits for a known upper bound.
 - [ ] The procedure note stays in the docs: remove the cluster's `ClusterSPIFFEID`s before
       deleting the `ManagedCluster`.
+
+## Status (2026-11-13)
+
+Done, committed locally. See "Progress (Days 10-23)" in `questions.md` for the commit and findings.

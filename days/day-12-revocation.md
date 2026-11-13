@@ -154,3 +154,7 @@ The sdk-go registry already has `CloseCluster(cluster)`, `CloseAddOn(cluster, ad
 `CloseTrustDomain(td)` (each returns how many connections it closed), plus `Len()` and
 `PeerSerials(id)` for tests. A closed agent reconnects at once at the TLS level (Day 9 test); the
 authorizer must refuse it, so revocation needs both the close and the authorizer check.
+
+## Status (2026-11-13)
+
+Done, committed locally. See "Progress (Days 10-23)" in `questions.md` for the commit and findings.

@@ -175,3 +175,7 @@ git add -A && git commit -s -m ":sparkles: recover and record trusted admission 
 
 - [ ] `SPIFFEAdmissionReady` is only `True` after a finished recovery.
 - [ ] Recovery never deletes anything outside the agent namespace and recorded add-on namespaces.
+
+## Status (2026-11-13)
+
+Done, committed locally. See "Progress (Days 10-23)" in `questions.md` for the commit and findings.

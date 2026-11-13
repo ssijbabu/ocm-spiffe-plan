@@ -242,3 +242,7 @@ Test rows:
 | Unknown placeholder | `agentIDTemplate: spiffe://{trustDomain}/ocm/{clutser}/{role}` | `Degraded`, `InvalidSPIFFEConfiguration`, message names `{clutser}`; no SPIFFE listener rendered |
 | Overlap | `agentIDTemplate: .../ocm/{cluster}/x/{role}`, `addOnAgentIDTemplate: .../ocm/{cluster}/{addon}/{agent}` | `Degraded`, `can match the same SPIFFE ID` |
 | Server ID matches | `serverSPIFFEID: spiffe://ocm-hub.example.org/ocm/cluster/hub/agent/work` | `Degraded`, `agents could present it` |
+
+## Status (2026-11-13)
+
+Done, committed locally. See "Progress (Days 10-23)" in `questions.md` for the commit and findings.

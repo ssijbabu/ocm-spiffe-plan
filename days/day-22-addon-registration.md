@@ -162,3 +162,7 @@ Add-on agents must be in the trust domain their cluster is pinned to. In hosted 
 No change. The hub's subject check compares the `kubeClient` subject with the user and groups an
 add-on SVID maps to. The add-on template changes only the layout of the ID, never the user and
 groups, so a default subject still passes and a custom user such as `my-team-bot` still fails.
+
+## Status (2026-11-13)
+
+Done, committed locally. See "Progress (Days 10-23)" in `questions.md` for the commit and findings.

@@ -259,3 +259,7 @@ Test rows:
   SPIFFE credentials own the TLS config.
 - Use `server_spiffe_test.go` in sdk-go as the model for the listener test: it runs the server
   builder end to end with `fakespire`.
+
+## Status (2026-11-13)
+
+Done, committed locally. See "Progress (Days 10-23)" in `questions.md` for the commit and findings.

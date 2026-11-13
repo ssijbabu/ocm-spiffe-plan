@@ -224,3 +224,7 @@ Test rows:
 | `Hosted`, cluster4 on mgmt1, `east.example.org` | `spiffe://{trustDomain}/k8s/{cluster}/ns/{namespace}/ocm/{role}` | registration `spiffe://east.example.org/k8s/cluster4/ns/cluster4/ocm/registration` |
 | `Default`, agent namespace `team-a-ocm` | same | work `spiffe://ocm-hub.example.org/k8s/cluster1/ns/team-a-ocm/ocm/work` |
 | any | `spiffe://{trustDomain}/ocm/{clutser}/{role}` | no agents; `Degraded`, `InvalidSPIFFEConfiguration` |
+
+## Status (2026-11-13)
+
+Done, committed locally. See "Progress (Days 10-23)" in `questions.md` for the commit and findings.

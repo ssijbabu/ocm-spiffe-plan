@@ -229,3 +229,7 @@ git add -A && git commit -s -m ":sparkles: block exec, image changes and foreign
 
 - [ ] No user, including cluster-admin, can run a process in an agent pod through the API.
 - [ ] The add-on label can't be added to an existing namespace.
+
+## Status (2026-11-13)
+
+Done, committed locally. See "Progress (Days 10-23)" in `questions.md` for the commit and findings.

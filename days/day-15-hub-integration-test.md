@@ -151,3 +151,7 @@ lease update) is enough; the rest of the suite only uses the defaults.
 `fakespire` has `NewCA`, `CA.Issue`, `CA.Bundle`, `Start`, `Server.SetSVIDs`, `Server.Federate`
 (for a second trust domain) and `Server.Stop`. Unix socket paths are limited to about 100 bytes, so
 `Start` uses a short temp directory, not `t.TempDir()`.
+
+## Status (2026-11-13)
+
+Done, committed locally. See "Progress (Days 10-23)" in `questions.md` for the commit and findings.

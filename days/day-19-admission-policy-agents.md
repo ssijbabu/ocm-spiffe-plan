@@ -218,3 +218,7 @@ git add -A && git commit -s -m ":sparkles: admission policy for SPIFFE agent nam
 
 - [ ] Only operator-owned Deployments can produce pods with agent ServiceAccounts and role labels.
 - [ ] Without the policy API, no agent starts.
+
+## Status (2026-11-13)
+
+Done, committed locally. See "Progress (Days 10-23)" in `questions.md` for the commit and findings.

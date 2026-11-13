@@ -226,3 +226,17 @@ Test rows for the helper:
 | empty (default) | cluster1, my-addon, my-addon-agent | `spiffe://ocm-hub.example.org/ocm/cluster/cluster1/addon/my-addon/agent/my-addon-agent` |
 | `spiffe://{trustDomain}/k8s/{cluster}/ns/{namespace}/addon/{addon}/{agent}` | same, namespace `open-cluster-management-agent-addon` | `spiffe://ocm-hub.example.org/k8s/cluster1/ns/open-cluster-management-agent-addon/addon/my-addon/my-addon-agent` |
 | `spiffe://{trustDomain}/ocm/{cluster}/{addon}` | same | error `must contain {agent}` |
+
+## Status (2026-11-13)
+
+Done, committed locally. See "Progress (Days 10-23)" in `questions.md` for the commit and findings.
+
+What was built differs from Tasks 2-4 in these points:
+- The wrapper is `agent.WithSPIFFE`, applied to every add-on in the deploy controller, so
+  AddOnTemplate add-ons in ocm get it too. It changes manifests only when the add-on's
+  `status.registrations` report the `spiffe` driver.
+- The settings come from the `<addon>-spiffe` ConfigMap (Q8), mounted under the old volume name.
+- The Klusterlet name comes from the cluster annotation `agent.open-cluster-management.io/klusterlet-name`,
+  which the Klusterlet operator passes to the registration agent in spiffe mode (ocm `544c5e266`).
+  Without it, namespaces aren't labeled and a warning is logged.
+- Task 6: no draft PR yet; the replace lines are local.

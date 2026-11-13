@@ -131,3 +131,7 @@ This replaces the "multiple agent trust domains" update above.
   the agent's ID, also after a later update drops it.
 - The base client reconnects and resubscribes by itself after the hub closes the connection at
   SVID expiry; the first retry is after 5–10s (`questions.md` Q9). Nothing to add in the agents.
+
+## Status (2026-11-13)
+
+Done, committed locally. See "Progress (Days 10-23)" in `questions.md` for the commit and findings.
