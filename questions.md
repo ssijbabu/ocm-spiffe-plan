@@ -2,7 +2,10 @@
 
 Open points found while implementing. Tick them when answered, and say where.
 
-- [ ] Q1 (proposal OQ4): which SPIRE topology for e2e? Decide by Day 26. Note: with one hub
+- [x] Q1 (proposal OQ4): which SPIRE topology for e2e? **One SPIRE server on the hub** (Day 26):
+      spoke agents attest with `externalK8sPSAT`, the hub publishes the bundle to each spoke
+      (`bundlePublisher.externalK8sConfigMap`), and `externalControllerManagers` reconcile the
+      spokes' own `ClusterSPIFFEID`s, so spoke entries are ordinary CRs. Decide by Day 26. Note: with one hub
       server and agent-only spokes, spoke `ClusterSPIFFEID`s aren't reconciled (Day 26 update).
 - [ ] Q2: does envtest in ocm run Kubernetes >= 1.30? Needed for ValidatingAdmissionPolicy on Day 19.
 - [ ] Q3: exact identity of the work agent on the managed cluster in hosted mode, for the add-on
@@ -79,7 +82,7 @@ addon-framework `main` at clone time.
       driver (no CSR), and the spoke reports `CustomSignerNotSupported`. A custom `kubeClient`
       subject gets `SubjectNotSupportedBySPIFFE` on the hub. Document both in the proposal.
 
-## Progress (Days 10-25, 2026-11-13)
+## Progress (Days 10-28, 2026-11-13)
 
 All local commits, nothing pushed. ocm and addon-framework `replace` sdk-go (and ocm also
 addon-framework) with `../`; switch to pushed fork commits before PRs. sdk-go `5b1570dc` isn't pushed.
@@ -100,7 +103,10 @@ addon-framework) with `../`; switch to pushed fork commits before PRs. sdk-go `5
 | 23 | ocm | `5a0f42c72`, `544c5e266` | vendor framework; `klusterlet-name` cluster annotation |
 
 | 24 | clusteradm | `75cac934`, `19d99e07` | init/join/accept; no token or bootstrap Secret with spiffe |
-| 25 | ocm | (this commit) | migration: agent deletes old hub Secrets, operator downgrade cleanup |
+| 25 | ocm | `acce663c2` | migration: agent deletes old hub Secrets, operator downgrade cleanup |
+| 26 | ocm | `491c69eae` | kind + SPIRE: one hub server, external PSAT, bundle publisher, external controller manager (answers Q1 for e2e) |
+| 27-28 | ocm | `acdb176aa`..`301d209f2` | e2e in all four modes; five bugs fixed; see `e2e-results.md` |
+| 27 | clusteradm | `1c9b4a71` | init message order |
 
 Tests: ocm registration integration 105/105 earlier, SPIFFE specs pass; add-on integration
 29/29; operator, registration, addon, common unit tests pass; addon-framework `./pkg/...` passes.
@@ -127,6 +133,19 @@ Tests: ocm registration integration 105/105 earlier, SPIFFE specs pass; add-on i
       `hub-kubeconfig-secret` written via a CSR), and the grpc integration hub uses a mock
       authorizer that allows everything, so it can't show cross-cluster refusal. Migration from
       `grpc` itself goes to the e2e days (26-28).
+
+- [ ] Q18 (Day 27): with SVID TTLs under 10 minutes, the CloudEvents base client's reconnect backoff
+      grows (5-10s, then 25-50s, cap 60s) because it resets only after 10 minutes without a
+      reconnect. In e2e with a 2m TTL one ManifestWork update arrived 42s late (nothing was lost).
+      With 1h SVIDs it doesn't happen. Proposal for sdk-go: don't count a close at SVID expiry (or
+      after a connection that lived longer than its first backoff step) as a failure.
+- [ ] Q19 (Day 27): the gate refuses the work and add-on agents of a denied cluster, but the
+      singleton agent has one SVID for registration and work, so it keeps the work RoleBinding's
+      access while denied (as the CSR driver's certificate does today). Refusing it needs the
+      gate to look at each event's data type. Decide in review.
+- [ ] Q20 (Day 28): the operator watches admission policies only on the cluster it runs on. In
+      Hosted modes the add-on and namespace label policies on the managed cluster are checked at
+      the 5-minute resync only.
 
 ## Lessons from implementation (2026-11-13)
 

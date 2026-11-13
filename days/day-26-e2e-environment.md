@@ -182,3 +182,7 @@ spoke's `ClusterSPIFFEID`s in Task 3 would never be reconciled. Either create th
 with `spire-server entry create` on the hub server (parented to the spoke's agents, selectors
 `k8s:ns`, `k8s:sa`, `k8s:pod-label`), or run a SPIRE server per cluster (nested or federated).
 See `plan/clusterspiffeid.md`, "Topology". Decide with Q1.
+
+## Status (2026-11-13)
+
+Done, committed locally; results and gaps in `e2e-results.md`.

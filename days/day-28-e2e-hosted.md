@@ -108,3 +108,7 @@ management cluster: the operator renders
 `spiffe://east.example.org/k8s/cluster4/ns/cluster4/ocm/registration` and
 `spiffe://east.example.org/k8s/cluster5/ns/cluster5/ocm/klusterlet`. This checks that
 `{namespace}` is the namespace the agent pods actually run in, in hosted mode.
+
+## Status (2026-11-13)
+
+Done, committed locally; results and gaps in `e2e-results.md`.

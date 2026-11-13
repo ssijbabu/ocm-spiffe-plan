@@ -555,3 +555,106 @@ git push fork spire
 ```
 
 Then move the `replace` lines in `sdk-go` and `ocm` to the new SHA.
+
+## In simple words: what changed and why
+
+Day 2 only changed the API, which is the list of settings an admin can write on the hub's
+`ClusterManager`. No hub code reads these settings yet; that comes on later days.
+
+### A switch that is off by default
+
+We added a feature gate called `SPIFFERegistration`. A feature gate is an on/off switch. While it
+is off, OCM behaves exactly as it did before.
+
+We did this because the feature is new. A hub that is already running must not change its
+behavior just because it was upgraded. The admin has to turn the feature on.
+
+### A new way for agents to log in
+
+We added `authType: spiffe`, with a `spiffe` block that holds its settings. It tells the hub that
+agents prove who they are with an SVID, a short-lived identity document issued by SPIRE.
+
+It sits next to the existing drivers (`csr`, `awsirsa`, `grpc`) and doesn't replace them. A hub
+can keep its old clusters on the old drivers and add new ones with `spiffe`.
+
+### Which SPIRE the hub belongs to, and which ones it trusts
+
+A trust domain is the name of one SPIRE installation, for example `ocm-hub.example.org`.
+
+`trustDomain` is the hub's own. The hub's identity comes from that SPIRE, so the hub has to know
+its name.
+
+`agentTrustDomains` is the list of SPIREs the hub accepts agents from. A managed cluster can have
+its own SPIRE, separate from the hub's. The hub must not trust every SPIRE it can verify, only the
+ones the admin named. An agent from any other trust domain is refused.
+
+The hub's own trust domain is always accepted, even if the admin leaves it out of the list. If it
+weren't, forgetting to list it would lock out every agent that uses the hub's SPIRE. The API
+server can't add it to the list for us, so we wrote one function, `GetAgentTrustDomains()`, that
+returns the list with the hub's trust domain included. All later code calls this function and
+never reads the raw list.
+
+### The identity the hub shows to agents
+
+`serverSPIFFEID` is the SPIFFE ID the hub presents when an agent connects. If the admin doesn't
+set it, a standard one is used: `spiffe://<trustDomain>/ocm/hub/grpc-server`.
+
+An agent checks this ID before it sends anything, so it knows it is talking to the real hub. That
+only works if the ID is fixed and known in advance.
+
+### Where the hub gets its SVID
+
+`workloadAPISocket` is the path to the local SPIRE agent's socket inside the hub pod. This socket
+is the only place the hub gets its SVID from; OCM never creates or stores one. The default is the
+path the SPIFFE CSI driver uses, so most admins won't set it.
+
+### Two time settings for deleted clusters
+
+`maxSVIDLifetime` (default `24h`) is the longest an agent's SVID can be valid. `maxClockSkew`
+(default `5m`) is how far the clocks of the hub and the SPIRE servers may differ.
+
+They exist because of deletion. When an admin deletes a cluster, an SVID issued a minute earlier
+is still valid for hours. With that SVID, the old agent could register again and bring the cluster
+back. So the hub keeps a deleted cluster in "terminating" for the SVID lifetime plus the clock
+skew. After that, no SVID from before the deletion can still be valid.
+
+### A separate port for SPIFFE agents
+
+We added `grpc-spiffe` as an endpoint protocol. It lets the hub expose a second gRPC port, only
+for the new driver.
+
+The new driver is a separate design from the existing `grpc` driver. With its own port, nothing
+about the existing `grpc` port changes, and both can run on the same hub.
+
+### Configurable ID layouts
+
+`agentIDTemplate` and `addOnAgentIDTemplate` describe the shape of an agent's SPIFFE ID, using
+placeholders such as `{cluster}`, `{role}`, `{addon}` and `{agent}`. The defaults are the layout
+from the proposal.
+
+The hub reads the cluster name and the agent's role out of the ID, so it must know where each part
+sits. Many companies already have their own naming rules for SPIFFE IDs and can't use ours. With
+templates, they tell the hub their layout. A hub that doesn't set them behaves as before.
+
+### Checking the settings when they are applied
+
+Each field has rules: allowed characters, maximum length, and "the `spiffe` block is required when
+`authType` is `spiffe`". The API server refuses a setting that breaks a rule.
+
+This way a typo is caught at `kubectl apply` with a clear message, not hours later as a
+connection that fails for no obvious reason.
+
+Two checks could not be done this way: that `serverSPIFFEID` is inside `trustDomain`, and that the
+templates use the right placeholders. Kubernetes limits how expensive a CRD's rules may be, and
+these go over the limit, because the drivers are in a list with no maximum size. The operator will
+check them and report `Degraded` (Day 14).
+
+### A test for every rule
+
+Each rule has a test with one accepted value and one refused value. If someone later loosens a
+rule by mistake, a test fails.
+
+### What did not change
+
+Nothing added here holds a key, a certificate or a token. The `spiffe` block is only names,
+addresses and durations.

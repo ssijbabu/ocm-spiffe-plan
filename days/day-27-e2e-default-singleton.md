@@ -152,3 +152,7 @@ Also run one add-on (enable, status sync) with a custom `addOnAgentIDTemplate` o
 Expect a 5–10s gap in event delivery after each SVID expiry (the base client's first reconnect
 delay, `questions.md` Q9). "SVID rotation under load" should check that nothing is lost after
 the gap (the resync covers it), not that there is no gap.
+
+## Status (2026-11-13)
+
+Done, committed locally; results and gaps in `e2e-results.md`.
