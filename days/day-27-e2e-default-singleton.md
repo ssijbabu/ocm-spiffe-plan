@@ -156,3 +156,29 @@ the gap (the resync covers it), not that there is no gap.
 ## Status (2026-11-13)
 
 Done, committed locally; results and gaps in `e2e-results.md`.
+
+## In simple words: what changed and why
+
+Day 27 ran the whole thing on the real clusters from Day 26, in `Default` and `Singleton` modes.
+Two more scripts build the OCM images from our branch and install OCM: the hub with only the
+`spiffe` driver, a join with no token, the SPIRE entries applied only after the operator reports
+`SPIFFEAdmissionReady`, and then accept. kind has no load balancer, so a NodePort stands in for
+it.
+
+What passed: the cluster joins with no token; no Secret with a hub credential exists on the
+managed cluster; the cluster is pinned to its trust domain; a `ManifestWork` is applied; a
+command run inside an agent pod is refused, even for a cluster admin; and deleting a Klusterlet
+removes its policies. In `Default` mode we also ran the longer checks. With SVIDs that live two
+minutes and updates sent for five minutes, nothing was lost, though one update arrived 42 seconds
+late (`questions.md` Q18; it doesn't happen with one-hour SVIDs). A denied cluster stops
+receiving work. A deleted cluster is held for the configured time and then released on time.
+
+Not everything in the plan was run. Status feedback, enabling and removing an add-on (this needs
+a test add-on image built on the new helper), and the switch to a custom ID template are still
+open. The results table is in `e2e-results.md`.
+
+The main value of this day was the bugs. Real SPIRE and real clusters found problems that the
+unit and integration tests had not: the lost recovery record and the health check that killed the
+work agent (Days 17 and 21), the denied cluster whose work agent kept working (Day 12), the
+policies left behind after a Klusterlet was deleted (Day 21), and the wrong order in the
+`clusteradm init` message (Day 24). All are fixed and have unit tests.

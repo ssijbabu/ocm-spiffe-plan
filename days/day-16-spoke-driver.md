@@ -197,3 +197,20 @@ of the rendered ID.
 ## Status (2026-11-13)
 
 Done, committed locally. See "Progress (Days 10-23)" in `questions.md` for the commit and findings.
+
+## In simple words: what changed and why
+
+Day 16 moved to the managed cluster. We added the `spiffe` driver to the registration agent, the
+agent that makes a cluster join the hub. With the other drivers it starts from a bootstrap
+kubeconfig, asks the hub to sign a certificate, and saves the result in a Secret. With `spiffe` it
+does none of that. It waits until SPIRE has given it its SVID, connects to the hub's SPIFFE
+listener, and creates its `ManagedCluster`. The parts of the agent that handle the bootstrap and
+the Secret are simply not started.
+
+The agent doesn't work out its own SPIFFE ID. The Klusterlet operator builds it from the template
+(Day 18) and passes it in with a flag. So the agent needs no template code, and it can't end up
+with a different idea of its ID than the operator and the SPIRE entry have.
+
+The code that builds the connection to the hub is shared with the existing `grpc` driver and not
+copied. The only real difference between the two is where the credentials come from, so one copy
+of the rest is easier to keep correct.

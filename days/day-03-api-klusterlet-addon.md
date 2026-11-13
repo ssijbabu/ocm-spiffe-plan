@@ -462,104 +462,65 @@ Committed as api `b805cf6c` (with Day 2's update) and pushed to `fork/spire`:
 ## In simple words: what changed and why
 
 Day 3 did for the managed cluster what Day 2 did for the hub. It only changed the API, which is
-the list of settings an admin can write on the `Klusterlet`. No agent code reads them yet.
-
-### The agents' side of the new driver
+the list of settings an admin can write on the `Klusterlet`, and no agent code reads them yet. The
+Klusterlet has no Secret reference for `spiffe`, the status holds only names, UIDs, generations
+and IDs, and a Klusterlet that doesn't use `spiffe` is not affected.
 
 We added `authType: spiffe` to the Klusterlet, with a `spiffe` block for its settings. It tells
-the agents to reach the hub with their SPIRE-issued SVID.
+the agents to reach the hub with their SPIRE-issued SVID. In the other drivers the agents start
+from a bootstrap kubeconfig Secret; in this mode there is none, and the SVID is the only
+credential. Two settings say where the hub is and how to recognize it. `hubEndpoint` is the
+address of the hub's `grpc-spiffe` port. `hubSPIFFEID` is the only identity the agents accept from
+the hub: when an agent connects, the server shows its SPIFFE ID, and if it isn't exactly this one,
+the agent drops the connection. This protects the agent from a fake hub.
 
-In the other drivers, the agents start from a bootstrap kubeconfig Secret. In this mode there is
-none: the SVID is the only credential.
+Two more settings are about the agents' own SPIRE. `trustDomain` is the name of the SPIRE the
+agents get their SVIDs from. A managed cluster can have its own SPIRE, different from the hub's,
+and the agents build their own SPIFFE ID with this name. If it is not set, the hub's trust domain
+is used, which fits the simple setup where everyone shares one SPIRE. `workloadAPISocket` is the
+path to the local SPIRE agent's socket inside the agent pods. As on the hub, it is the only place
+an agent gets its SVID from.
 
-### Where the hub is, and how to recognize it
+Add-ons must use SPIFFE too. We added a rule that when the Klusterlet uses `spiffe`, the add-on
+driver must also be `spiffe`. With the `csr` or `token` add-on drivers, OCM creates a credential
+for each add-on and stores it in a Secret, and the requirement is that OCM stores no credentials
+at all, so mixing isn't allowed. For the same reason `spiffe` is now an accepted driver value on
+`ManagedClusterAddOn`. It had to be added to both API versions (v1alpha1 and v1beta1), because
+Kubernetes converts one into the other and would refuse the value in the version that didn't know
+it.
 
-`hubEndpoint` is the address of the hub's `grpc-spiffe` port, so the agents know where to connect.
+The Klusterlet status got a new `spiffe` part, where the operator writes down what it has
+protected. SPIRE gives an SVID to any pod that runs in certain namespaces with a certain
+ServiceAccount, so before SPIRE is told about a cluster, the operator must make sure only the
+right pods can run there. It does that with admission policies. The status records the policies it
+installed and the add-on namespace it created, each by name and UID. The UID matters because a
+name can be reused: if someone deletes a policy and creates another with the same name, the UID is
+different and the operator notices. The `SPIFFEAdmissionReady` condition is the signal to the
+platform that it is now safe to create the cluster's SPIRE entries.
 
-`hubSPIFFEID` is the only identity the agents accept from the hub. When an agent connects, the
-server shows its SPIFFE ID. If it isn't exactly this one, the agent drops the connection. This
-protects the agent from a fake hub.
+We also added a constant for the annotation `open-cluster-management.io/spiffe-trust-domain` on
+the `ManagedCluster`, which records which trust domain that cluster's agents must come from. The
+hub can trust several SPIREs, and without this pin an admin of the "west" SPIRE could issue an
+SVID with the name of a cluster that belongs to "east" and take that cluster over. With the pin,
+the hub accepts a cluster only from the trust domain it was registered with. Day 3 only added the
+name of the annotation; the hub code that sets and checks it comes on Day 11.
 
-### The agents' own SPIRE
+Later the same day the Klusterlet got the same two ID templates as the ClusterManager,
+`agentIDTemplate` and `addOnAgentIDTemplate`. The agents must show exactly the ID the hub expects,
+so both sides need the same layout, and if they differ the hub refuses the agents. The API server
+refuses a template that leaves out a needed part (`{cluster}` and `{role}` for agents; `{cluster}`,
+`{addon}` and `{agent}` for add-ons), because without those parts the hub couldn't tell which
+cluster or which agent is calling. On the hub this check had to be left to the operator (see
+Day 2), but on the Klusterlet the rule is cheap enough for the API server.
 
-`trustDomain` is the name of the SPIRE the agents get their SVIDs from. A managed cluster can have
-its own SPIRE, different from the hub's, and the agents build their own SPIFFE ID with this name.
-If it is not set, the hub's trust domain is used, which fits the simple setup where everyone
-shares one SPIRE.
+The templates brought two more changes. With `spiffe`, `clusterName` must now be set; in the other
+drivers it can be left empty and the registration agent generates one. The cluster name is part of
+the agent's SPIFFE ID, the operator has to build that ID before the agent starts, and the SPIRE
+entries need the real name too, so a name generated later is too late. And the status now lists
+the full SPIFFE ID of each agent (registration, work, klusterlet) in `status.spiffe.agentIDs`, as
+the operator built it from the template. Whoever creates the SPIRE entries has to give SPIRE
+exactly these IDs, and can copy them from the status without filling in the template by hand,
+where a small mistake would make the hub refuse the agent.
 
-`workloadAPISocket` is the path to the local SPIRE agent's socket inside the agent pods. As on the
-hub, it is the only place an agent gets its SVID from.
-
-### Add-ons must use SPIFFE too
-
-We added a rule: when the Klusterlet uses `spiffe`, the add-on driver must also be `spiffe`.
-
-With the `csr` or `token` add-on drivers, OCM creates a credential for each add-on and stores it
-in a Secret. The requirement is that OCM stores no credentials at all, so mixing isn't allowed.
-
-For the same reason `spiffe` is now an accepted driver value on `ManagedClusterAddOn`. It had to
-be added to both API versions (v1alpha1 and v1beta1), because Kubernetes converts one into the
-other and would refuse the value in the version that didn't know it.
-
-### The operator writes down what it has protected
-
-SPIRE gives an SVID to any pod that runs in certain namespaces with a certain ServiceAccount. So
-before SPIRE is told about a cluster, the operator must make sure only the right pods can run
-there. It does that with admission policies.
-
-`status.spiffe` is where the operator records this: the policies it installed and the add-on
-namespace it created, each by name and UID. The UID matters because a name can be reused. If
-someone deletes a policy and creates another with the same name, the UID is different and the
-operator notices.
-
-The `SPIFFEAdmissionReady` condition is the signal to the platform: once it is True, it is safe to
-create the cluster's SPIRE entries.
-
-### Pinning a cluster to one SPIRE
-
-We added a constant for the annotation `open-cluster-management.io/spiffe-trust-domain` on the
-`ManagedCluster`. It records which trust domain that cluster's agents must come from.
-
-The hub can trust several SPIREs. Without the pin, an admin of the "west" SPIRE could issue an
-SVID with the name of a cluster that belongs to "east", and take that cluster over. With the pin,
-the hub accepts `cluster2` only from the trust domain it was registered with.
-
-Day 3 only added the name of the annotation. The hub code that sets and checks it comes on
-Day 11.
-
-### The same ID layouts as the hub
-
-The Klusterlet got the same two templates as the ClusterManager, `agentIDTemplate` and
-`addOnAgentIDTemplate`. The agents must show exactly the ID the hub expects, so both sides need
-the same layout. If they differ, the hub refuses the agents.
-
-The API server refuses a template that leaves out a needed part: `{cluster}` and `{role}` for
-agents; `{cluster}`, `{addon}` and `{agent}` for add-ons. Without those parts the hub couldn't
-tell which cluster or which agent is calling. On the hub this check had to be left to the operator
-(see Day 2), but on the Klusterlet the rule is cheap enough for the API server.
-
-### The cluster name is now required
-
-With `spiffe`, `clusterName` must be set. In the other drivers it can be left empty and the
-registration agent generates one.
-
-The cluster name is part of the agent's SPIFFE ID. The operator has to build that ID before the
-agent starts, and the SPIRE entries need the real name too, so a name generated later is too late.
-
-### The operator shows the exact agent IDs
-
-`status.spiffe.agentIDs` lists the full SPIFFE ID of each agent (registration, work, klusterlet),
-as the operator built it from the template.
-
-Whoever creates the SPIRE entries has to give SPIRE exactly these IDs. They can copy them from the
-status and don't have to fill in the template by hand, where a small mistake would make the hub
-refuse the agent.
-
-### A test for every rule
-
-As on Day 2, each rule has a test with one accepted value and one refused value.
-
-### What did not change
-
-The Klusterlet has no Secret reference for `spiffe`, and the status holds only names, UIDs,
-generations and IDs. A Klusterlet that doesn't use `spiffe` is not affected.
+As on Day 2, each rule has a test with one accepted value and one refused value, so a rule can't
+be loosened later without a test failing.

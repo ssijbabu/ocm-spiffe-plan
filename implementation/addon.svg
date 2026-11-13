@@ -1,0 +1,59 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 560" width="1200" height="560" font-family="Helvetica, Arial, sans-serif">
+<defs><marker id="ak" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#333"/></marker><marker id="ag" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#2e7d32"/></marker><marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#c62828"/></marker><marker id="ab" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#3a5bc7"/></marker></defs>
+<rect width="1200" height="560" fill="#ffffff"/>
+<text x="600.0" y="32" font-size="20" font-weight="bold" fill="#1a1a1a" text-anchor="middle">Use case: an add-on agent with its own SVID</text>
+<rect x="20" y="60" width="430" height="470" rx="10" fill="#f5f2fa" stroke="#6a4c9c" stroke-width="1.3"/>
+<text x="36" y="84" font-size="14" font-weight="bold" fill="#6a4c9c" text-anchor="start">Hub cluster</text>
+<rect x="500" y="60" width="680" height="470" rx="10" fill="#f3f6fc" stroke="#3a5bc7" stroke-width="1.3"/>
+<text x="516" y="84" font-size="14" font-weight="bold" fill="#3a5bc7" text-anchor="start">Managed cluster</text>
+<rect x="40" y="110" width="220" height="70" rx="6" fill="#ffffff" stroke="#555" stroke-width="1.3"/>
+<text x="150.0" y="134.0" font-size="13" font-weight="bold" fill="#1a1a1a" text-anchor="middle">add-on manager</text>
+<text x="150.0" y="149.0" font-size="11" font-weight="normal" fill="#333" text-anchor="middle">addon-framework: WithSPIFFE</text>
+<text x="150.0" y="164.0" font-size="11" font-weight="normal" fill="#333" text-anchor="middle">adapts the manifests</text>
+<rect x="270" y="110" width="170" height="70" rx="6" fill="#ffffff" stroke="#555" stroke-width="1.3"/>
+<text x="355.0" y="141.5" font-size="13" font-weight="bold" fill="#1a1a1a" text-anchor="middle">ManagedClusterAddOn</text>
+<text x="355.0" y="156.5" font-size="11" font-weight="normal" fill="#333" text-anchor="middle">status: driver spiffe</text>
+<rect x="40" y="230" width="220" height="56" rx="6" fill="#ffffff" stroke="#555" stroke-width="1.3"/>
+<text x="150.0" y="254.5" font-size="13" font-weight="bold" fill="#1a1a1a" text-anchor="middle">ManifestWork</text>
+<text x="150.0" y="269.5" font-size="11" font-weight="normal" fill="#333" text-anchor="middle">add-on Namespace, Deployment</text>
+<rect x="40" y="370" width="320" height="100" rx="6" fill="#ebe4f7" stroke="#6a4c9c" stroke-width="1.3"/>
+<text x="200.0" y="401.5" font-size="13" font-weight="bold" fill="#1a1a1a" text-anchor="middle">SPIFFE listener</text>
+<text x="200.0" y="416.5" font-size="11" font-weight="normal" fill="#333" text-anchor="middle">an add-on agent may touch only its own</text>
+<text x="200.0" y="431.5" font-size="11" font-weight="normal" fill="#333" text-anchor="middle">ManagedClusterAddOn on its own cluster;</text>
+<text x="200.0" y="446.5" font-size="11" font-weight="normal" fill="#333" text-anchor="middle">cut off when the add-on is disabled</text>
+<path d="M150,180 L150,230" fill="none" stroke="#333" stroke-width="1.5" marker-end="url(#ak)"/>
+<text x="182" y="210" font-size="11.5" font-weight="normal" fill="#222" text-anchor="middle" paint-order="stroke" stroke="#fff" stroke-width="4" stroke-linejoin="round">renders</text>
+<rect x="520" y="110" width="180" height="70" rx="6" fill="#e3ebfb" stroke="#3a5bc7" stroke-width="1.3"/>
+<text x="610.0" y="134.0" font-size="13" font-weight="bold" fill="#1a1a1a" text-anchor="middle">registration agent</text>
+<text x="610.0" y="149.0" font-size="11" font-weight="normal" fill="#333" text-anchor="middle">no CSR, no token,</text>
+<text x="610.0" y="164.0" font-size="11" font-weight="normal" fill="#333" text-anchor="middle">no Secret for add-ons</text>
+<rect x="520" y="230" width="180" height="56" rx="6" fill="#e3ebfb" stroke="#3a5bc7" stroke-width="1.3"/>
+<text x="610.0" y="254.5" font-size="13" font-weight="bold" fill="#1a1a1a" text-anchor="middle">work agent</text>
+<text x="610.0" y="269.5" font-size="11" font-weight="normal" fill="#333" text-anchor="middle">applies the ManifestWork</text>
+<rect x="520" y="440" width="180" height="60" rx="6" fill="#eef7ee" stroke="#2e7d32" stroke-width="1.3"/>
+<text x="610.0" y="466.5" font-size="13" font-weight="bold" fill="#1a1a1a" text-anchor="middle">SPIRE agent</text>
+<text x="610.0" y="481.5" font-size="11" font-weight="normal" fill="#333" text-anchor="middle">Workload API</text>
+<rect x="740" y="100" width="420" height="300" rx="6" fill="#fffdf5" stroke="#b26a00" stroke-width="1.3" stroke-dasharray="6 4"/>
+<text x="950" y="122" font-size="11.5" font-weight="bold" fill="#b26a00" text-anchor="middle">add-on namespace, labeled spiffe-addon-namespace = &lt;klusterlet&gt;</text>
+<rect x="760" y="140" width="380" height="70" rx="6" fill="#ffffff" stroke="#555" stroke-width="1.3"/>
+<text x="950.0" y="164.0" font-size="13" font-weight="bold" fill="#1a1a1a" text-anchor="middle">ConfigMap &lt;addon&gt;-spiffe</text>
+<text x="950.0" y="179.0" font-size="11" font-weight="normal" fill="#333" text-anchor="middle">hub endpoint, hub SPIFFE ID, agent SPIFFE ID,</text>
+<text x="950.0" y="194.0" font-size="11" font-weight="normal" fill="#333" text-anchor="middle">socket path. Nothing secret.</text>
+<rect x="760" y="260" width="380" height="116" rx="6" fill="#e3ebfb" stroke="#3a5bc7" stroke-width="1.3"/>
+<text x="950.0" y="299.5" font-size="13" font-weight="bold" fill="#1a1a1a" text-anchor="middle">add-on agent pod</text>
+<text x="950.0" y="314.5" font-size="11" font-weight="normal" fill="#333" text-anchor="middle">label spiffe-role: addon, its own ServiceAccount</text>
+<text x="950.0" y="329.5" font-size="11" font-weight="normal" fill="#333" text-anchor="middle">mounts the ConfigMap and the Workload API socket</text>
+<text x="950.0" y="344.5" font-size="11" font-weight="normal" fill="#333" text-anchor="middle">spiffeclient opens the connection to the hub</text>
+<path d="M260,258 L520,258" fill="none" stroke="#333" stroke-width="1.5" marker-end="url(#ak)"/>
+<text x="390" y="251" font-size="11.5" font-weight="normal" fill="#222" text-anchor="middle" paint-order="stroke" stroke="#fff" stroke-width="4" stroke-linejoin="round">sent over the SPIFFE listener</text>
+<path d="M700,150 L760,168" fill="none" stroke="#333" stroke-width="1.5" marker-end="url(#ak)"/>
+<text x="722" y="142" font-size="11.5" font-weight="normal" fill="#222" text-anchor="middle" paint-order="stroke" stroke="#fff" stroke-width="4" stroke-linejoin="round">writes</text>
+<path d="M700,262 L760,296" fill="none" stroke="#333" stroke-width="1.5" marker-end="url(#ak)"/>
+<text x="722" y="296" font-size="11.5" font-weight="normal" fill="#222" text-anchor="middle" paint-order="stroke" stroke="#fff" stroke-width="4" stroke-linejoin="round">creates</text>
+<path d="M950,210 L950,260" fill="none" stroke="#333" stroke-width="1.5" marker-end="url(#ak)"/>
+<text x="982" y="240" font-size="11.5" font-weight="normal" fill="#222" text-anchor="middle" paint-order="stroke" stroke="#fff" stroke-width="4" stroke-linejoin="round">mounted</text>
+<path d="M700,462 L880,376" fill="none" stroke="#2e7d32" stroke-width="1.5" marker-end="url(#ag)"/>
+<text x="850" y="452" font-size="11.5" font-weight="normal" fill="#2e7d32" text-anchor="middle" paint-order="stroke" stroke="#fff" stroke-width="4" stroke-linejoin="round">the add-on&#x27;s own SVID</text>
+<path d="M760,350 L360,420" fill="none" stroke="#3a5bc7" stroke-width="1.5" marker-end="url(#ab)"/>
+<text x="560" y="362" font-size="11.5" font-weight="normal" fill="#3a5bc7" text-anchor="middle" paint-order="stroke" stroke="#fff" stroke-width="4" stroke-linejoin="round">mTLS with the add-on&#x27;s own SVID</text>
+</svg>

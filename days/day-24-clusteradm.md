@@ -209,3 +209,29 @@ Differences from the tasks above:
 - `join` skips `waitUntilManagedClusterIsCreated` with spiffe (it needs a hub token); with `--wait`
   it waits for `SPIFFEAdmissionReady` and prints `status.spiffe.agentIDs`.
 - No draft PR (Task 6): nothing is pushed.
+
+## In simple words: what changed and why
+
+Day 24 changed `clusteradm`, the command line tool admins use to set up OCM, so nobody has to
+write the `ClusterManager` and `Klusterlet` settings by hand.
+
+`clusteradm init` with the `spiffe` driver takes the hub's trust domain and the other settings
+from Day 2 as flags, turns the feature gate on and exposes the SPIFFE port. It checks the
+settings on the admin's machine first, so a typo in a template fails before anything is applied.
+A hub with only `spiffe` gets no bootstrap token, and the join command that `init` prints has no
+token in it.
+
+`clusteradm join` with `spiffe` takes the hub's address and the hub's SPIFFE ID. It refuses a
+token if one is passed, so nobody uses one by mistake, and it creates no bootstrap Secret. It
+works in all four modes. The cluster name is required, as the API demands since Day 3. `join` has
+no credential for the hub, so it can't read the hub's templates; the admin has to pass the same
+templates on both sides. When it is done, it waits until the operator reports
+`SPIFFEAdmissionReady` and prints the SPIFFE IDs the platform team must create SPIRE entries for.
+
+`clusteradm accept` no longer waits for a certificate request for these clusters, because there is
+none. With a trust domain flag, it refuses a cluster that is pinned to another trust domain and
+pins a cluster that isn't pinned yet.
+
+One message was corrected after the e2e run. `init` told admins to create the SPIRE entries
+before `join`. They must come after, once the admission policies are in place. Nothing is pushed
+yet, so there is no draft pull request.

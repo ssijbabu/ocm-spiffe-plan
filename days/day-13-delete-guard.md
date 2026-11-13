@@ -143,3 +143,24 @@ until deletionTimestamp + maxSVIDLifetime + maxClockSkew."
 ## Status (2026-11-13)
 
 Done, committed locally. See "Progress (Days 10-23)" in `questions.md` for the commit and findings.
+
+## In simple words: what changed and why
+
+Day 13 closed a gap that deletion leaves open. When an admin deletes a cluster, the agent on that
+cluster may still hold an SVID that is valid for hours. A new agent is allowed to create its own
+`ManagedCluster`, so the old agent could use that SVID to create the cluster again right after it
+was deleted.
+
+OCM can't ask SPIRE to cancel the SVID, so it waits until the SVID can't be valid any more. The
+hub puts a marker (a finalizer) on each SPIFFE cluster. When the cluster is deleted, the marker
+keeps the object in the "terminating" state for `maxSVIDLifetime` plus `maxClockSkew`, the two
+settings from Day 2. For example, with SVIDs that live one hour and five minutes of clock skew, a
+cluster deleted at 10:40 stays until 11:45. During that time the name is still taken, so it can't
+be created again, and the gate from Day 12 refuses the cluster's agents.
+
+Only the empty object waits. The rest of the cleanup, such as removing the cluster's permissions
+and its content on the hub, happens at once as before.
+
+The guard covers clusters that are pinned to a trust domain, and every cluster when `spiffe` is
+the hub's only driver. A cluster that joined with `csr` on a hub with both drivers is not held.
+This choice is still to be confirmed in review (`questions.md` Q11).

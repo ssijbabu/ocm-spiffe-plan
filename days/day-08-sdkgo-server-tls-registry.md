@@ -231,3 +231,25 @@ sdk-go `0ece0894`, pushed; tested with `-race`.
 - "Next unary call fails with Unavailable" after expiry isn't testable as written: gRPC reconnects
   at once with a new handshake. The test checks that the open stream ends and the reconnect is a
   new handshake (a second timer).
+
+## In simple words: what changed and why
+
+Day 8 built the hub's side of the connection, in `sdk-go`. Until now the shared gRPC server could
+only take its certificate from files. We added a way to give it other credentials, and kept the
+old file-based path exactly as it was, so the existing `grpc` listener doesn't change.
+
+The new SPIFFE credentials get the hub's SVID from the Workload API, so no certificate file exists
+in this mode. They accept a client only if its SVID is from one of the agent trust domains, even
+when the hub's SPIRE trusts more domains than that, and only if its ID fits one of the templates.
+A client that fails is dropped during the TLS handshake, before it can send anything.
+
+The other new piece is the connection registry. It keeps a list of the open connections, with the
+cluster, the add-on and the time the SVID expires for each one. For each connection it sets a
+timer, and when the SVID expires it closes the connection. This matters because TLS checks a
+certificate only once, when the connection is opened. Without the timer, an agent could open a
+connection with a valid SVID and keep using it for days after that SVID expired or was withdrawn.
+With it, a connection can never live longer than the SVID it was opened with.
+
+The registry can also close connections on request: all connections of one cluster, of one add-on
+on a cluster, or of one trust domain. Day 12 uses this to cut off a cluster or an add-on when an
+admin denies or deletes it.

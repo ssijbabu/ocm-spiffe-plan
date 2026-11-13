@@ -166,3 +166,27 @@ groups, so a default subject still passes and a custom user such as `my-team-bot
 ## Status (2026-11-13)
 
 Done, committed locally. See "Progress (Days 10-23)" in `questions.md` for the commit and findings.
+
+## In simple words: what changed and why
+
+Day 22 brought add-ons into the model. With the other drivers, the registration agent gets a
+credential for each add-on from the hub and stores it in a Secret named `<addon>-hub-kubeconfig`.
+With the `spiffe` add-on driver it creates no certificate request, no token and no Secret. Each
+add-on agent has its own SVID from SPIRE. The add-on driver must be `spiffe` exactly when the
+agents use `spiffe`, the same rule the API enforces since Day 3.
+
+Two kinds of add-on setup are refused, with a clear reason in the add-on's status. Add-ons that
+ask for a certificate from a custom signer can't work, because in this mode nothing signs
+certificates. And an add-on whose install namespace doesn't have the dedicated add-on label is
+refused, because in a shared namespace other pods could get the add-on's identity.
+
+An add-on agent still needs to know a few things: the hub's address, the hub's SPIFFE ID, where
+the SPIRE socket is, and its own SPIFFE ID. The registration agent writes these into a ConfigMap
+named `<addon>-spiffe` in the add-on's namespace, and deletes it when the add-on is removed.
+Nothing in it is secret: it is addresses and names, no keys and no certificates. So it stays
+within the rule that OCM stores no credentials (`questions.md` Q8).
+
+The integration test runs an add-on agent with its own SVID. It can update its own add-on's
+status, it can't touch another add-on, and it is cut off when its add-on is disabled. The plan
+also had a hub-side check of the add-on's subject; that was built in the add-on framework on
+Day 23. The draft pull request for `ocm` is not opened yet, because nothing is pushed.

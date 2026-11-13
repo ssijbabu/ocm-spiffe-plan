@@ -112,3 +112,30 @@ management cluster: the operator renders
 ## Status (2026-11-13)
 
 Done, committed locally; results and gaps in `e2e-results.md`.
+
+## In simple words: what changed and why
+
+Day 28 ran the same checks for the two hosted modes. In these modes the agents don't run on the
+cluster they manage. They run on a separate management cluster, in a namespace named after the
+Klusterlet. For the test, the managed cluster of Day 27 became the management cluster, and two
+more kind clusters were added as managed clusters. Those two have no SPIRE at all, because no
+agent runs on them.
+
+What passed in `Hosted` and `SingletonHosted`: join with no token, no Secret with a hub
+credential, pinning to the trust domain, and a `ManifestWork` whose content lands on the managed
+cluster and not on the management cluster. In `Hosted` mode, running a command inside an agent
+pod is refused.
+
+The check that matters most for hosted modes is that Klusterlets on one management cluster don't
+affect each other. We deleted one Klusterlet's agent policy. At first nothing happened until the
+operator's five-minute resync, which is a window where a fake agent pod could get an SVID. After
+the fix (the operator now watches the policies), the policy was back and the agents were replaced
+within six seconds, and the other Klusterlet on the same management cluster was not touched.
+
+Three things are left open. Two planned checks (one Klusterlet's work agent trying to use
+another's add-on namespace, and the label put on `default` during recovery) were not run on real
+clusters. The second has a unit test from Day 21. For the first, the tests of Day 20 only show
+that an ordinary user is refused by the same rule, not another Klusterlet's work agent. The custom
+ID template was not run either. And in hosted modes a Secret with the kubeconfig of the managed cluster still exists on
+the management cluster. It is not a hub credential and every driver needs it, but whether that is
+acceptable has to be confirmed and written in the proposal (`questions.md` Q15).

@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 400" width="1200" height="400" font-family="Helvetica, Arial, sans-serif">
+<defs><marker id="ak" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#333"/></marker><marker id="ag" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#2e7d32"/></marker><marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#c62828"/></marker><marker id="ab" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#3a5bc7"/></marker></defs>
+<rect width="1200" height="400" fill="#ffffff"/>
+<text x="600.0" y="32" font-size="20" font-weight="bold" fill="#1a1a1a" text-anchor="middle">Use case: deleting a cluster. The delete guard holds the name until no old SVID can be valid</text>
+<line x1="230" y1="290" x2="1150" y2="290" stroke="#333" stroke-width="1.5"/>
+<line x1="230.0" y1="285" x2="230.0" y2="295" stroke="#333" stroke-width="1.5"/>
+<text x="230.0" y="312" font-size="11.5" font-weight="normal" fill="#222" text-anchor="middle">10:30</text>
+<line x1="345.0" y1="285" x2="345.0" y2="295" stroke="#333" stroke-width="1.5"/>
+<text x="345.0" y="312" font-size="11.5" font-weight="normal" fill="#222" text-anchor="middle">10:40</text>
+<line x1="460.0" y1="285" x2="460.0" y2="295" stroke="#333" stroke-width="1.5"/>
+<text x="460.0" y="312" font-size="11.5" font-weight="normal" fill="#222" text-anchor="middle">10:50</text>
+<line x1="575.0" y1="285" x2="575.0" y2="295" stroke="#333" stroke-width="1.5"/>
+<text x="575.0" y="312" font-size="11.5" font-weight="normal" fill="#222" text-anchor="middle">11:00</text>
+<line x1="690.0" y1="285" x2="690.0" y2="295" stroke="#333" stroke-width="1.5"/>
+<text x="690.0" y="312" font-size="11.5" font-weight="normal" fill="#222" text-anchor="middle">11:10</text>
+<line x1="805.0" y1="285" x2="805.0" y2="295" stroke="#333" stroke-width="1.5"/>
+<text x="805.0" y="312" font-size="11.5" font-weight="normal" fill="#222" text-anchor="middle">11:20</text>
+<line x1="920.0" y1="285" x2="920.0" y2="295" stroke="#333" stroke-width="1.5"/>
+<text x="920.0" y="312" font-size="11.5" font-weight="normal" fill="#222" text-anchor="middle">11:30</text>
+<line x1="1035.0" y1="285" x2="1035.0" y2="295" stroke="#333" stroke-width="1.5"/>
+<text x="1035.0" y="312" font-size="11.5" font-weight="normal" fill="#222" text-anchor="middle">11:40</text>
+<line x1="1150.0" y1="285" x2="1150.0" y2="295" stroke="#333" stroke-width="1.5"/>
+<text x="1150.0" y="312" font-size="11.5" font-weight="normal" fill="#222" text-anchor="middle">11:50</text>
+<line x1="345.0" y1="60" x2="345.0" y2="290" stroke="#c62828" stroke-width="1.2" stroke-dasharray="4 4"/>
+<line x1="1092.5" y1="60" x2="1092.5" y2="290" stroke="#c62828" stroke-width="1.2" stroke-dasharray="4 4"/>
+<rect x="333.5" y="70" width="690.0" height="28" rx="6" fill="#eef7ee" stroke="#2e7d32" stroke-width="1.3"/>
+<text x="678.5" y="88" font-size="11.5" font-weight="normal" fill="#222" text-anchor="middle">issued 10:39, valid 1 hour, to 11:39</text>
+<text x="20" y="88" font-size="12" font-weight="bold" fill="#1a1a1a" text-anchor="start">Last SVID of cluster1</text>
+<rect x="230.0" y="126" width="115.0" height="28" rx="6" fill="#e3ebfb" stroke="#3a5bc7" stroke-width="1.3"/>
+<text x="287.5" y="144" font-size="11.5" font-weight="normal" fill="#222" text-anchor="middle">exists</text>
+<text x="20" y="144" font-size="12" font-weight="bold" fill="#1a1a1a" text-anchor="start">ManagedCluster cluster1</text>
+<rect x="345.0" y="126" width="747.5" height="28" rx="6" fill="#fff4e5" stroke="#b26a00" stroke-width="1.3"/>
+<text x="718.75" y="144" font-size="11.5" font-weight="normal" fill="#222" text-anchor="middle">terminating: the spiffe-revocation finalizer keeps the object</text>
+<text x="353.0" y="186" font-size="11.5" font-weight="normal" fill="#c62828" text-anchor="start" paint-order="stroke" stroke="#fff" stroke-width="4" stroke-linejoin="round">10:40 the admin deletes cluster1.</text>
+<text x="353.0" y="202" font-size="11.5" font-weight="normal" fill="#c62828" text-anchor="start" paint-order="stroke" stroke="#fff" stroke-width="4" stroke-linejoin="round">Connections are closed; the gate refuses its agents.</text>
+<text x="353.0" y="218" font-size="11.5" font-weight="normal" fill="#c62828" text-anchor="start" paint-order="stroke" stroke="#fff" stroke-width="4" stroke-linejoin="round">A new create fails: the name still exists.</text>
+<text x="1084.5" y="250" font-size="11.5" font-weight="normal" fill="#c62828" text-anchor="end" paint-order="stroke" stroke="#fff" stroke-width="4" stroke-linejoin="round">11:45 = 10:40 + maxSVIDLifetime (1h) + maxClockSkew (5m).</text>
+<text x="1084.5" y="266" font-size="11.5" font-weight="normal" fill="#c62828" text-anchor="end" paint-order="stroke" stroke="#fff" stroke-width="4" stroke-linejoin="round">The finalizer is removed and the object is gone.</text>
+<text x="600" y="352" font-size="12.5" font-weight="normal" fill="#222" text-anchor="middle">OCM cannot ask SPIRE to cancel an SVID, so it waits for the longest time one could still be valid.</text>
+<text x="600" y="376" font-size="11.5" font-weight="normal" fill="#555" text-anchor="middle">Example values. The defaults are maxSVIDLifetime 24h and maxClockSkew 5m.</text>
+</svg>

@@ -186,3 +186,25 @@ See `plan/clusterspiffeid.md`, "Topology". Decide with Q1.
 ## Status (2026-11-13)
 
 Done, committed locally; results and gaps in `e2e-results.md`.
+
+## In simple words: what changed and why
+
+Day 26 built the place to test everything for real: scripts that create two local Kubernetes
+clusters with kind, a hub and a managed cluster, and install real SPIRE on them. They use their
+own kubeconfig file, so they don't touch any other cluster or the current kubectl context.
+
+We had to choose how SPIRE is laid out. We chose one SPIRE server, on the hub, with one trust
+domain. The managed cluster runs only a SPIRE agent and the CSI driver that mounts the socket
+into pods. The agent proves to the hub's server which cluster and node it is on, and the server
+checks that with the managed cluster's API. This is the simplest layout that covers the design,
+and it answers the question of which topology the tests use (`questions.md` Q1).
+
+One problem came up. SPIRE entries are normally written as `ClusterSPIFFEID` objects, and
+something has to turn them into entries on the server. With no SPIRE server on the managed
+cluster, nobody would do that for objects created there. The SPIRE chart can run one extra
+controller per managed cluster next to the hub's server, and we use that. So the entries for a
+managed cluster are ordinary objects applied on that cluster, as an admin would expect.
+
+The setup ends with a smoke test: a pod that looks like `cluster1`'s work agent starts on the
+managed cluster and receives the right SVID. This proves the SPIRE side works before OCM is
+installed, so a failure on the later days points at OCM and not at the environment.

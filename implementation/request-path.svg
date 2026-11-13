@@ -1,0 +1,65 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 372" width="1200" height="372" font-family="Helvetica, Arial, sans-serif">
+<defs><marker id="ak" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#333"/></marker><marker id="ag" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#2e7d32"/></marker><marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#c62828"/></marker><marker id="ab" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#3a5bc7"/></marker></defs>
+<rect width="1200" height="372" fill="#ffffff"/>
+<text x="600.0" y="32" font-size="20" font-weight="bold" fill="#1a1a1a" text-anchor="middle">What the hub checks on every request from an agent</text>
+<text x="183" y="80" font-size="12" font-weight="bold" fill="#6a4c9c" text-anchor="middle">connection is opened</text>
+<text x="764.0" y="80" font-size="12" font-weight="bold" fill="#6a4c9c" text-anchor="middle">every request and every stream</text>
+<rect x="24" y="96" width="152" height="130" rx="6" fill="#f5f2fa" stroke="#6a4c9c" stroke-width="1.3"/>
+<text x="100.0" y="142.5" font-size="13" font-weight="bold" fill="#1a1a1a" text-anchor="middle">1. TLS handshake</text>
+<text x="100.0" y="157.5" font-size="11" font-weight="normal" fill="#333" text-anchor="middle">SVID is signed by an</text>
+<text x="100.0" y="172.5" font-size="11" font-weight="normal" fill="#333" text-anchor="middle">accepted trust domain;</text>
+<text x="100.0" y="187.5" font-size="11" font-weight="normal" fill="#333" text-anchor="middle">ID fits a template</text>
+<text x="100.0" y="246" font-size="10.5" font-weight="bold" fill="#555" text-anchor="middle">sdk-go</text>
+<text x="100.0" y="261" font-size="9.5" font-weight="normal" fill="#555" text-anchor="middle" font-family="DejaVu Sans Mono, Menlo, Consolas, monospace">spiffe/credentials.go</text>
+<path d="M176,161.0 L190,161.0" fill="none" stroke="#333" stroke-width="1.5" marker-end="url(#ak)"/>
+<rect x="190" y="96" width="152" height="130" rx="6" fill="#f5f2fa" stroke="#6a4c9c" stroke-width="1.3"/>
+<text x="266.0" y="142.5" font-size="13" font-weight="bold" fill="#1a1a1a" text-anchor="middle">2. Registry</text>
+<text x="266.0" y="157.5" font-size="11" font-weight="normal" fill="#333" text-anchor="middle">remembers cluster,</text>
+<text x="266.0" y="172.5" font-size="11" font-weight="normal" fill="#333" text-anchor="middle">add-on and expiry;</text>
+<text x="266.0" y="187.5" font-size="11" font-weight="normal" fill="#333" text-anchor="middle">closes at SVID expiry</text>
+<text x="266.0" y="246" font-size="10.5" font-weight="bold" fill="#555" text-anchor="middle">sdk-go</text>
+<text x="266.0" y="261" font-size="9.5" font-weight="normal" fill="#555" text-anchor="middle" font-family="DejaVu Sans Mono, Menlo, Consolas, monospace">spiffe/registry.go</text>
+<path d="M342,161.0 L356,161.0" fill="none" stroke="#333" stroke-width="1.5" marker-end="url(#ak)"/>
+<rect x="356" y="96" width="152" height="130" rx="6" fill="#f5f2fa" stroke="#6a4c9c" stroke-width="1.3"/>
+<text x="432.0" y="142.5" font-size="13" font-weight="bold" fill="#1a1a1a" text-anchor="middle">3. Authenticator</text>
+<text x="432.0" y="157.5" font-size="11" font-weight="normal" fill="#333" text-anchor="middle">puts OCM user, groups</text>
+<text x="432.0" y="172.5" font-size="11" font-weight="normal" fill="#333" text-anchor="middle">and SPIFFE ID into</text>
+<text x="432.0" y="187.5" font-size="11" font-weight="normal" fill="#333" text-anchor="middle">the request</text>
+<text x="432.0" y="246" font-size="10.5" font-weight="bold" fill="#555" text-anchor="middle">sdk-go</text>
+<text x="432.0" y="261" font-size="9.5" font-weight="normal" fill="#555" text-anchor="middle" font-family="DejaVu Sans Mono, Menlo, Consolas, monospace">authn/spiffe.go</text>
+<path d="M508,161.0 L522,161.0" fill="none" stroke="#333" stroke-width="1.5" marker-end="url(#ak)"/>
+<rect x="522" y="96" width="152" height="130" rx="6" fill="#f3f6fc" stroke="#3a5bc7" stroke-width="1.3"/>
+<text x="598.0" y="135.0" font-size="13" font-weight="bold" fill="#1a1a1a" text-anchor="middle">4. Cluster gate</text>
+<text x="598.0" y="150.0" font-size="11" font-weight="normal" fill="#333" text-anchor="middle">cluster not deleting;</text>
+<text x="598.0" y="165.0" font-size="11" font-weight="normal" fill="#333" text-anchor="middle">accepted (work, add-on);</text>
+<text x="598.0" y="180.0" font-size="11" font-weight="normal" fill="#333" text-anchor="middle">add-on enabled;</text>
+<text x="598.0" y="195.0" font-size="11" font-weight="normal" fill="#333" text-anchor="middle">trust domain = pin</text>
+<text x="598.0" y="246" font-size="10.5" font-weight="bold" fill="#555" text-anchor="middle">ocm</text>
+<text x="598.0" y="261" font-size="9.5" font-weight="normal" fill="#555" text-anchor="middle" font-family="DejaVu Sans Mono, Menlo, Consolas, monospace">grpc/spiffe_gate.go</text>
+<path d="M674,161.0 L688,161.0" fill="none" stroke="#333" stroke-width="1.5" marker-end="url(#ak)"/>
+<rect x="688" y="96" width="152" height="130" rx="6" fill="#f5f2fa" stroke="#6a4c9c" stroke-width="1.3"/>
+<text x="764.0" y="142.5" font-size="13" font-weight="bold" fill="#1a1a1a" text-anchor="middle">5. SVID check</text>
+<text x="764.0" y="157.5" font-size="11" font-weight="normal" fill="#333" text-anchor="middle">own cluster only,</text>
+<text x="764.0" y="172.5" font-size="11" font-weight="normal" fill="#333" text-anchor="middle">own add-on only,</text>
+<text x="764.0" y="187.5" font-size="11" font-weight="normal" fill="#333" text-anchor="middle">no CSR, no token</text>
+<text x="764.0" y="246" font-size="10.5" font-weight="bold" fill="#555" text-anchor="middle">sdk-go</text>
+<text x="764.0" y="261" font-size="9.5" font-weight="normal" fill="#555" text-anchor="middle" font-family="DejaVu Sans Mono, Menlo, Consolas, monospace">authz/kube/sar.go</text>
+<path d="M840,161.0 L854,161.0" fill="none" stroke="#333" stroke-width="1.5" marker-end="url(#ak)"/>
+<rect x="854" y="96" width="152" height="130" rx="6" fill="#f5f2fa" stroke="#6a4c9c" stroke-width="1.3"/>
+<text x="930.0" y="142.5" font-size="13" font-weight="bold" fill="#1a1a1a" text-anchor="middle">6. Kubernetes RBAC</text>
+<text x="930.0" y="157.5" font-size="11" font-weight="normal" fill="#333" text-anchor="middle">SubjectAccessReview</text>
+<text x="930.0" y="172.5" font-size="11" font-weight="normal" fill="#333" text-anchor="middle">for the mapped user</text>
+<text x="930.0" y="187.5" font-size="11" font-weight="normal" fill="#333" text-anchor="middle">and groups</text>
+<text x="930.0" y="246" font-size="10.5" font-weight="bold" fill="#555" text-anchor="middle">sdk-go</text>
+<text x="930.0" y="261" font-size="9.5" font-weight="normal" fill="#555" text-anchor="middle" font-family="DejaVu Sans Mono, Menlo, Consolas, monospace">authz/kube/sar.go</text>
+<path d="M1006,161.0 L1020,161.0" fill="none" stroke="#333" stroke-width="1.5" marker-end="url(#ak)"/>
+<rect x="1020" y="96" width="152" height="130" rx="6" fill="#f5f2fa" stroke="#6a4c9c" stroke-width="1.3"/>
+<text x="1096.0" y="150.0" font-size="13" font-weight="bold" fill="#1a1a1a" text-anchor="middle">7. Expiry check</text>
+<text x="1096.0" y="165.0" font-size="11" font-weight="normal" fill="#333" text-anchor="middle">SVID is still valid</text>
+<text x="1096.0" y="180.0" font-size="11" font-weight="normal" fill="#333" text-anchor="middle">right now</text>
+<text x="1096.0" y="246" font-size="10.5" font-weight="bold" fill="#555" text-anchor="middle">sdk-go</text>
+<text x="1096.0" y="261" font-size="9.5" font-weight="normal" fill="#555" text-anchor="middle" font-family="DejaVu Sans Mono, Menlo, Consolas, monospace">authn/spiffe.go</text>
+<text x="600" y="300" font-size="12.5" font-weight="normal" fill="#222" text-anchor="middle">A request that fails any step is refused there. A request that passes all seven reaches the service</text>
+<text x="600" y="318" font-size="12.5" font-weight="normal" fill="#222" text-anchor="middle">(ManagedCluster, ManifestWork, add-on status, lease, events).</text>
+<text x="600" y="348" font-size="11.5" font-weight="normal" fill="#555" text-anchor="middle">Steps 1 to 3 and 5 to 7 are shared code in sdk-go. Step 4 is in ocm, because it needs the hub&#x27;s list of clusters and add-ons.</text>
+</svg>

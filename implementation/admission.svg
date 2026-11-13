@@ -1,0 +1,68 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 590" width="1200" height="590" font-family="Helvetica, Arial, sans-serif">
+<defs><marker id="ak" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#333"/></marker><marker id="ag" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#2e7d32"/></marker><marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#c62828"/></marker><marker id="ab" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#3a5bc7"/></marker></defs>
+<rect width="1200" height="590" fill="#ffffff"/>
+<text x="600.0" y="32" font-size="20" font-weight="bold" fill="#1a1a1a" text-anchor="middle">Use case: protecting agent identities with admission policies</text>
+<text x="30" y="70" font-size="13" font-weight="bold" fill="#2e7d32" text-anchor="start">The only way to a pod that gets an agent&#x27;s SVID</text>
+<rect x="30" y="84" width="188" height="80" rx="6" fill="#eef7ee" stroke="#2e7d32" stroke-width="1.3"/>
+<text x="124.0" y="113.0" font-size="13" font-weight="bold" fill="#1a1a1a" text-anchor="middle">Klusterlet operator</text>
+<text x="124.0" y="128.0" font-size="11" font-weight="normal" fill="#333" text-anchor="middle">only it may create or</text>
+<text x="124.0" y="143.0" font-size="11" font-weight="normal" fill="#333" text-anchor="middle">change Deployments</text>
+<path d="M218,124 L268,124" fill="none" stroke="#2e7d32" stroke-width="1.5" marker-end="url(#ag)"/>
+<rect x="268" y="84" width="188" height="80" rx="6" fill="#eef7ee" stroke="#2e7d32" stroke-width="1.3"/>
+<text x="362.0" y="120.5" font-size="13" font-weight="bold" fill="#1a1a1a" text-anchor="middle">Deployment</text>
+<text x="362.0" y="135.5" font-size="11" font-weight="normal" fill="#333" text-anchor="middle">owned by the operator</text>
+<path d="M456,124 L506,124" fill="none" stroke="#2e7d32" stroke-width="1.5" marker-end="url(#ag)"/>
+<rect x="506" y="84" width="188" height="80" rx="6" fill="#eef7ee" stroke="#2e7d32" stroke-width="1.3"/>
+<text x="600.0" y="113.0" font-size="13" font-weight="bold" fill="#1a1a1a" text-anchor="middle">ReplicaSet</text>
+<text x="600.0" y="128.0" font-size="11" font-weight="normal" fill="#333" text-anchor="middle">made only by the</text>
+<text x="600.0" y="143.0" font-size="11" font-weight="normal" fill="#333" text-anchor="middle">deployment controller</text>
+<path d="M694,124 L744,124" fill="none" stroke="#2e7d32" stroke-width="1.5" marker-end="url(#ag)"/>
+<rect x="744" y="84" width="188" height="80" rx="6" fill="#eef7ee" stroke="#2e7d32" stroke-width="1.3"/>
+<text x="838.0" y="105.5" font-size="13" font-weight="bold" fill="#1a1a1a" text-anchor="middle">Pod</text>
+<text x="838.0" y="120.5" font-size="11" font-weight="normal" fill="#333" text-anchor="middle">made only by the</text>
+<text x="838.0" y="135.5" font-size="11" font-weight="normal" fill="#333" text-anchor="middle">replicaset controller;</text>
+<text x="838.0" y="150.5" font-size="11" font-weight="normal" fill="#333" text-anchor="middle">role label matches SA</text>
+<path d="M932,124 L982,124" fill="none" stroke="#2e7d32" stroke-width="1.5" marker-end="url(#ag)"/>
+<rect x="982" y="84" width="188" height="80" rx="6" fill="#eef7ee" stroke="#2e7d32" stroke-width="1.3"/>
+<text x="1076.0" y="113.0" font-size="13" font-weight="bold" fill="#1a1a1a" text-anchor="middle">SPIRE agent</text>
+<text x="1076.0" y="128.0" font-size="11" font-weight="normal" fill="#333" text-anchor="middle">gives the SVID for</text>
+<text x="1076.0" y="143.0" font-size="11" font-weight="normal" fill="#333" text-anchor="middle">namespace + SA + label</text>
+<text x="30" y="200" font-size="13" font-weight="bold" fill="#c62828" text-anchor="start">Refused by the API server</text>
+<rect x="30" y="214" width="270" height="76" rx="6" fill="#fdecea" stroke="#c62828" stroke-width="1.3"/>
+<text x="165.0" y="241.0" font-size="13" font-weight="bold" fill="#1a1a1a" text-anchor="middle">Anyone else</text>
+<text x="165.0" y="256.0" font-size="11" font-weight="normal" fill="#333" text-anchor="middle">creates or changes a Deployment,</text>
+<text x="165.0" y="271.0" font-size="11" font-weight="normal" fill="#333" text-anchor="middle">ReplicaSet or Pod there</text>
+<rect x="320" y="214" width="270" height="76" rx="6" fill="#fdecea" stroke="#c62828" stroke-width="1.3"/>
+<text x="455.0" y="241.0" font-size="13" font-weight="bold" fill="#1a1a1a" text-anchor="middle">A wrong pair</text>
+<text x="455.0" y="256.0" font-size="11" font-weight="normal" fill="#333" text-anchor="middle">role label that does not match the</text>
+<text x="455.0" y="271.0" font-size="11" font-weight="normal" fill="#333" text-anchor="middle">ServiceAccount for the install mode</text>
+<rect x="610" y="214" width="270" height="76" rx="6" fill="#fdecea" stroke="#c62828" stroke-width="1.3"/>
+<text x="745.0" y="241.0" font-size="13" font-weight="bold" fill="#1a1a1a" text-anchor="middle">Other workload kinds</text>
+<text x="745.0" y="256.0" font-size="11" font-weight="normal" fill="#333" text-anchor="middle">StatefulSet, DaemonSet, Job or</text>
+<text x="745.0" y="271.0" font-size="11" font-weight="normal" fill="#333" text-anchor="middle">CronJob in the agent namespace</text>
+<rect x="900" y="214" width="270" height="76" rx="6" fill="#fdecea" stroke="#c62828" stroke-width="1.3"/>
+<text x="1035.0" y="241.0" font-size="13" font-weight="bold" fill="#1a1a1a" text-anchor="middle">Getting inside a pod</text>
+<text x="1035.0" y="256.0" font-size="11" font-weight="normal" fill="#333" text-anchor="middle">exec, attach, ephemeral container,</text>
+<text x="1035.0" y="271.0" font-size="11" font-weight="normal" fill="#333" text-anchor="middle">image or role label change</text>
+<text x="30" y="330" font-size="13" font-weight="bold" fill="#b26a00" text-anchor="start">The three policies the operator installs</text>
+<rect x="30" y="344" width="370" height="130" rx="6" fill="#fff4e5" stroke="#b26a00" stroke-width="1.3"/>
+<text x="215.0" y="390.5" font-size="13" font-weight="bold" fill="#1a1a1a" text-anchor="middle">1. Agent namespace policy</text>
+<text x="215.0" y="405.5" font-size="11" font-weight="normal" fill="#333" text-anchor="middle">one per Klusterlet</text>
+<text x="215.0" y="420.5" font-size="11" font-weight="normal" fill="#333" text-anchor="middle">covers the namespace the agents run in</text>
+<text x="215.0" y="435.5" font-size="11" font-weight="normal" fill="#333" text-anchor="middle">enforces the chain and the refusals above</text>
+<rect x="415" y="344" width="370" height="130" rx="6" fill="#fff4e5" stroke="#b26a00" stroke-width="1.3"/>
+<text x="600.0" y="383.0" font-size="13" font-weight="bold" fill="#1a1a1a" text-anchor="middle">2. Add-on namespace policy</text>
+<text x="600.0" y="398.0" font-size="11" font-weight="normal" fill="#333" text-anchor="middle">one per Klusterlet</text>
+<text x="600.0" y="413.0" font-size="11" font-weight="normal" fill="#333" text-anchor="middle">covers namespaces labeled for this Klusterlet</text>
+<text x="600.0" y="428.0" font-size="11" font-weight="normal" fill="#333" text-anchor="middle">only its work agent creates workloads there</text>
+<text x="600.0" y="443.0" font-size="11" font-weight="normal" fill="#333" text-anchor="middle">pods: role addon, their own ServiceAccount, no exec</text>
+<rect x="800" y="344" width="370" height="130" rx="6" fill="#fff4e5" stroke="#b26a00" stroke-width="1.3"/>
+<text x="985.0" y="383.0" font-size="13" font-weight="bold" fill="#1a1a1a" text-anchor="middle">3. Namespace label policy</text>
+<text x="985.0" y="398.0" font-size="11" font-weight="normal" fill="#333" text-anchor="middle">one for the whole cluster</text>
+<text x="985.0" y="413.0" font-size="11" font-weight="normal" fill="#333" text-anchor="middle">the add-on label is set only when a namespace is created,</text>
+<text x="985.0" y="428.0" font-size="11" font-weight="normal" fill="#333" text-anchor="middle">by the operator or that Klusterlet&#x27;s work agent;</text>
+<text x="985.0" y="443.0" font-size="11" font-weight="normal" fill="#333" text-anchor="middle">only the operator removes it</text>
+<text x="600" y="512" font-size="12.5" font-weight="normal" fill="#222" text-anchor="middle">Why: SPIRE gives an SVID to any pod with the right namespace, ServiceAccount and label.</text>
+<text x="600" y="532" font-size="12.5" font-weight="normal" fill="#222" text-anchor="middle">So what has to be protected is who can start, change or enter such a pod.</text>
+<text x="600" y="562" font-size="11" font-weight="normal" fill="#555" text-anchor="middle">Label: open-cluster-management.io/spiffe-role (pods), open-cluster-management.io/spiffe-addon-namespace (namespaces).</text>
+</svg>

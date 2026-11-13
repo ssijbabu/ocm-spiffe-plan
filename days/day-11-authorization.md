@@ -174,3 +174,26 @@ not touch cluster2's.
 ## Status (2026-11-13)
 
 Done, committed locally. See "Progress (Days 10-23)" in `questions.md` for the commit and findings.
+
+## In simple words: what changed and why
+
+Day 11 is about what an agent may do after the hub knows who it is. A valid SVID proves the
+caller is, say, the work agent of `cluster1`. It does not by itself stop that agent from sending
+a request about `cluster2`. So the permission check now compares every request with the identity
+in the SVID. An agent can act only on its own cluster, and an add-on agent only on its own add-on
+on its own cluster. This check runs first, before the normal Kubernetes permission check.
+
+The same check refuses every certificate request and token request on the SPIFFE listener. In
+this mode OCM issues nothing, so there must be no way to ask for a certificate or a token through
+the new port.
+
+We also made the hub pin each cluster to one trust domain. When an agent creates its
+`ManagedCluster`, the hub writes the trust domain of the agent's SVID into the annotation from
+Day 3. The hub sets it itself and ignores whatever the agent sent, and keeps it when the agent
+updates the cluster later. From then on, an SVID for that cluster from any other trust domain is
+refused. Without this, the admin of one trusted SPIRE could issue an SVID with the name of a
+cluster that belongs to another SPIRE and take it over. A cluster with no pin is treated as pinned
+when the hub accepts only one trust domain.
+
+The `{namespace}` part of an ID is never used in these decisions, because the hub can't verify
+it. The part of this work that lives in `sdk-go` (commit `5b1570dc`) is not pushed yet.

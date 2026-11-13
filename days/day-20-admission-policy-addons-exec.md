@@ -233,3 +233,27 @@ git add -A && git commit -s -m ":sparkles: block exec, image changes and foreign
 ## Status (2026-11-13)
 
 Done, committed locally. See "Progress (Days 10-23)" in `questions.md` for the commit and findings.
+
+## In simple words: what changed and why
+
+Day 20 finished the admission rules. First, more rules for agent pods: nobody can run a command
+in one (`exec`), attach to one, add a debug container to one, or change its image or its role
+label. Each of these would put someone's own code inside a pod that has an agent's SVID, and that
+code could read the SVID from the socket. The rule applies to everyone, including a cluster
+admin. Reading logs still works.
+
+Second, a policy for add-on namespaces. Add-on agents get SVIDs too, so their namespaces need the
+same care. A namespace counts as an add-on namespace when it has a label that names the
+Klusterlet. In such a namespace only that Klusterlet's work agent may create workloads, because
+that is how add-ons are installed. Add-on pods must have the role `addon` and their own
+ServiceAccount, so an add-on can't get an agent's identity.
+
+Third, a policy for the label itself. The label is what tells SPIRE and OCM "pods here may get
+add-on identities", so it must not be easy to add. It can only be set when the namespace is
+created, and only by the operator or that Klusterlet's work agent. Only the operator can remove
+it. This stops someone from putting the label on an existing namespace such as `default`, which
+would let the pods already there ask for add-on identities.
+
+In the hosted modes, where one management cluster carries several Klusterlets, the label value
+keeps them apart: one Klusterlet's work agent can't create anything in another Klusterlet's add-on
+namespace.

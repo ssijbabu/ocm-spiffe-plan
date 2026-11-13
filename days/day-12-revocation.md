@@ -158,3 +158,27 @@ authorizer must refuse it, so revocation needs both the close and the authorizer
 ## Status (2026-11-13)
 
 Done, committed locally. See "Progress (Days 10-23)" in `questions.md` for the commit and findings.
+
+## In simple words: what changed and why
+
+Day 12 made the hub cut an agent off when an admin says so. The gRPC server now watches the
+clusters and add-ons on the hub. When a cluster goes from accepted to denied, or is being
+deleted, it closes all of that cluster's SPIFFE connections. When an add-on is removed from a
+cluster, it closes only that add-on's connections. Other clusters are not affected.
+
+Closing the connection is not enough, because the agent reconnects within seconds and its SVID is
+still valid. So there is also a gate in front of the permission check. It refuses the agents of a
+cluster that is being deleted, and an add-on agent whose add-on is gone. The close makes the cut
+fast, and the gate makes it stay.
+
+All of this happens without talking to SPIRE. OCM can't ask SPIRE to take an SVID back, because
+the rule is that OCM contacts nothing but the local SPIRE agent. So OCM stops accepting the
+identity on its own side.
+
+Two details. A new cluster that was never accepted is not cut off, because it still has to create
+its `ManagedCluster` and wait to be accepted, as with the other drivers. And for a denied
+cluster, the first version relied on the hub removing the cluster's permissions. The e2e test on
+Day 27 showed this was not enough: the hub keeps one permission for the work agent, so it
+reconnected and kept receiving work. The gate now also refuses the work agent and add-on agents
+of a cluster that is not accepted. The registration agent keeps its basic access, so it can see
+when the cluster is accepted again.

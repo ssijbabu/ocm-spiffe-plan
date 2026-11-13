@@ -264,3 +264,26 @@ agent (found by Day 8's server test). Instead the Day 8 server credentials retur
 `authn.SPIFFEAuthInfo` (TLS info, SPIFFE ID, NotAfter) after they have verified and mapped the
 SVID, and `SPIFFEAuthenticator` accepts only that AuthInfo. A connection from any other
 credentials, even with a verified SVID chain, is refused. Tests cover that case.
+
+## In simple words: what changed and why
+
+Day 5 added the authenticator, still in `sdk-go`. The authenticator is the piece of the gRPC
+server that answers "who is calling?" for each request. Ours takes the agent's SVID, which the TLS
+layer has already checked, and puts the OCM user, the groups, the SPIFFE ID and the time the SVID
+expires into the request, so the later steps (the permission check on Day 11) can read them.
+
+It is used only on the new SPIFFE listener and never added to the existing `grpc` listener. A
+token or an OCM-signed certificate must not be accepted on the SPIFFE listener, and an SVID must
+not be accepted on the old one. If the two were mixed, the new driver would quietly accept the
+credentials it was built to get rid of.
+
+We also added two small checks, called interceptors, that refuse a request when the caller's SVID
+has already expired. The main protection is that the server closes the connection at the moment
+the SVID expires (Day 8). This is a second check behind it, in case a request arrives just before
+the close happens.
+
+One thing changed from the plan. The plan was to read the verified certificate from the TLS
+state. But go-spiffe checks the certificate in its own way and leaves that field empty, so the
+planned authenticator would have refused every real agent. Now the server's SPIFFE credentials
+(Day 8) check and map the SVID and hand over the result, and the authenticator accepts only that
+result. A connection that came through any other kind of credentials is refused.

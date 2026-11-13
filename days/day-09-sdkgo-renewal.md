@@ -137,3 +137,22 @@ Tasks 1–4 done: sdk-go `7541964e`, pushed to `fork/spire` with Days 4–8. Tas
   `make verify` (Go 1.26, golangci-lint v2.12.2): 0 issues. Same result at the pushed HEAD, after
   switching `api` to the fork commit.
 - sdk-go head for `ocm`'s `replace` (Day 10): `7541964e`.
+
+## In simple words: what changed and why
+
+Day 9 added no new feature. It proved, with tests, that the pieces from Days 7 and 8 work
+together when an SVID is renewed. The test follows one agent: it receives an event, SPIRE gives it
+a new SVID, the old one expires, the server closes the connection, the agent reconnects with the
+new SVID, and it receives the next event. Nothing is lost.
+
+This is the point of the whole design for renewal: OCM does nothing. SPIRE replaces the SVID, the
+old connection ends, and a new one starts. We first checked how the existing client behaves when
+its connection drops, in case we had to add reconnect code. It already reconnects and subscribes
+again by itself, with a first retry after 5 to 10 seconds, so nothing had to change.
+
+We also tested cutting a cluster off while it is in use. When the registry closes a cluster's
+connections, an open stream ends and a call that is still running fails. The agent can reconnect
+at the TLS level, which is why Day 12 adds a second check that refuses it.
+
+The work of Days 4 to 9 is pushed to the fork. The draft pull request for `sdk-go` is not opened
+yet.

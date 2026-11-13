@@ -237,3 +237,19 @@ sdk-go `3ed6eb13`, pushed. go-spiffe's `X509Source` only calls `FetchX509SVID`, 
 `FetchX509Bundles` isn't implemented. Added `Server.Federate(cas...)` (federated bundles in the
 response, keyed `spiffe://<td>`) and `Server.Stop()`. The socket lives in a short
 `os.MkdirTemp` directory: unix socket paths are limited to about 100 bytes.
+
+## In simple words: what changed and why
+
+Day 6 added a test tool, not a feature. In production, a pod gets its SVID from the local SPIRE
+agent through a socket called the Workload API. Tests can't depend on a real SPIRE being
+installed, so we wrote a small fake one that runs inside the test. It has its own test
+certificate authority, hands out SVIDs over a socket the same way SPIRE does, and lets the test
+decide how long an SVID lives and when it is replaced.
+
+We wrote our own because go-spiffe's fake server is private to that library and can't be imported.
+With it, a test can give an agent an SVID that lives two seconds and watch what happens when it
+expires, or hand out several SVIDs at once to check the agent picks the right one, or set up two
+trust domains. All the tests from Day 7 on, here and in `ocm`, use it.
+
+It lives under `pkg/testing` and no production code uses it, so it can never end up in a running
+hub or agent.

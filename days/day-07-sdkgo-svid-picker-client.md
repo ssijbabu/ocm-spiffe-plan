@@ -186,3 +186,25 @@ sdk-go `70c882fc`, pushed.
 - `NewGRPCOptions()` leaves `Dialer` nil, so `NewSPIFFEGRPCOptions` builds the `GRPCDialer`
   itself (keepalive off, as the YAML path defaults). It's in a new file, `spiffeoptions.go`.
 - Federation test (agent in `east.example.org`, hub in `ocm-hub.example.org`) included.
+
+## In simple words: what changed and why
+
+Day 7 built the agent's side of the connection, in `sdk-go`. The first part is picking the right
+SVID. SPIRE can give one pod several SVIDs, and by default a program uses the first one. An agent
+must not do that, because the order can change and it could show the hub the wrong identity. So
+the agent is told the exact ID it expects and picks the SVID with that ID. If SPIRE didn't send
+one, the error names the expected ID and the IDs that did arrive, so an admin can see at once that
+the SPIRE entry is missing or wrong. The same check is used to report that the agent is not ready.
+
+The second part is the connection to the hub. With the other drivers the agent reads a file with a
+certificate or a token. Here there is no file: the agent gets its SVID from the Workload API and
+uses it directly, and it stays in memory. The agent accepts only the hub's exact SPIFFE ID, not
+any ID from the hub's trust domain. Otherwise any other workload that SPIRE knows in that trust
+domain could pretend to be the hub.
+
+Renewal needs no extra code on the agent. Every time a connection is opened, it uses whatever SVID
+SPIRE has given the agent at that moment, so a new connection always uses the new SVID.
+
+We also tested the case where the agent and the hub are in different trust domains. It works as
+long as the agent's SPIRE also delivers the hub's trust bundle, which SPIRE does when the two are
+federated.

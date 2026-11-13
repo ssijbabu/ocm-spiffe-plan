@@ -155,3 +155,19 @@ lease update) is enough; the rest of the suite only uses the defaults.
 ## Status (2026-11-13)
 
 Done, committed locally. See "Progress (Days 10-23)" in `questions.md` for the commit and findings.
+
+## In simple words: what changed and why
+
+Day 15 added a test, not a feature. The tests so far checked each piece alone. This one runs the
+hub's controllers and the SPIFFE listener together against a real Kubernetes API server, with the
+real permission check, and with agents that have nothing but an SVID from the fake SPIRE of
+Day 6.
+
+It walks through a cluster's life: an agent registers and the cluster is pinned to its trust
+domain, another cluster's agent is refused, the SVID is renewed, the cluster is denied, and the
+cluster is deleted and held by the delete guard. It also covers a custom ID template, and later
+the real registration agent and a work agent that applies a `ManifestWork`.
+
+One check is there for the main rule of the project. After the flow, the test looks at the Secrets
+and ConfigMaps on the hub and fails if any holds a key or a certificate. So "OCM stores no
+credentials" is something a test proves on every run, not only something we say.

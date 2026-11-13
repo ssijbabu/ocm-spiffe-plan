@@ -95,3 +95,28 @@ git push origin spire
 ## Status (2026-11-13)
 
 Done, committed locally. See "Progress" in `questions.md` and Q14-Q17.
+
+## In simple words: what changed and why
+
+Day 25 was about clusters that already exist. A hub can run the old drivers and `spiffe` side by
+side, and a cluster can move from one to the other and back. What makes this possible is that the
+OCM user and group names are the same in every driver, so the cluster's permissions on the hub
+don't change when it switches.
+
+When a cluster switches to `spiffe`, its old Secrets with hub credentials have to go, or the
+cluster would still hold long-lived credentials. The registration agent deletes them, and only
+after its new SVID-based connection shows the cluster as accepted. The agent does this, not the
+operator, because only the agent knows the switch really worked. Until that moment the old
+Secrets are still there, so an admin can switch back if something is wrong. The old add-on Secret
+is deleted when the new add-on ConfigMap is written.
+
+When a cluster leaves `spiffe`, the operator undoes what it set up: the admission policies, the
+add-on namespace labels and the `spiffe` part of the status. The one policy that is shared by all
+Klusterlets is removed only when no other Klusterlet still uses `spiffe`.
+
+The integration test moves a cluster from `csr` to `spiffe` and back. The `ManagedCluster`, its
+`ManifestWork`, its add-on and its permissions stay the same objects the whole time, and no
+certificate request is made while the cluster is on `spiffe`. The plan said to test from `grpc`;
+we used `csr` because the `grpc` test hub allows everything and couldn't show a refusal
+(`questions.md` Q17). A unit test also checks that removing `grpc` from a hub removes the old
+Service and keeps the server running for the SPIFFE listener.

@@ -135,3 +135,23 @@ This replaces the "multiple agent trust domains" update above.
 ## Status (2026-11-13)
 
 Done, committed locally. See "Progress (Days 10-23)" in `questions.md` for the commit and findings.
+
+## In simple words: what changed and why
+
+Day 17 did the same for the work agent, the agent that applies what the hub sends to the cluster.
+With the `grpc` driver, the registration agent writes the hub credentials into a Secret and the
+work agent reads them from there. With `spiffe`, the work agent gets its own SVID from SPIRE and
+connects by itself, so the two agents share nothing and no Secret is needed. Each agent shows the
+hub only the identity of its own role.
+
+The work agent's health check now also reports when its SVID is missing. If SPIRE has no entry for
+the pod, the admin sees that in the agent's status and doesn't have to guess why it isn't
+connecting.
+
+In `Singleton` mode one process does both jobs. It uses a single SVID, with the role `klusterlet`,
+for registration and for work.
+
+The e2e test later found one bug here. The health check failed until the agent had opened its
+connection to SPIRE, which happens only after the agent has become the leader. On a slow start,
+Kubernetes restarted the agent before it got that far, again and again. The check now passes until
+the agent has started.

@@ -179,3 +179,32 @@ git add -A && git commit -s -m ":sparkles: recover and record trusted admission 
 ## Status (2026-11-13)
 
 Done, committed locally. See "Progress (Days 10-23)" in `questions.md` for the commit and findings.
+
+## In simple words: what changed and why
+
+Day 21 answered the question "what if someone removes or changes the policies?". The operator
+writes into the Klusterlet status which policies it installed, with their UID and generation (a
+number that goes up on every change). This is the record from Day 3. It is the only record:
+nothing is kept in memory, so it still works after the operator restarts.
+
+On every pass the operator compares the live policies with the record. If one was deleted,
+replaced or edited by someone else, the operator can no longer trust the namespaces. While the
+policy was missing, someone could have started a pod that poses as an agent, and the operator
+can't tell a good pod from a bad one. So it runs recovery: it restores the policies, removes the
+add-on label from namespaces that are not on record, deletes every workload in the agent
+namespace and the recorded add-on namespaces, waits until no pod is left, writes the new record,
+and only then starts its own agents again. The `SPIFFEAdmissionReady` condition is True only
+after this has finished, which is the signal that the SPIRE entries are safe to create.
+
+Recovery never deletes anything outside those namespaces. When the operator changes a policy
+itself, for example after an upgrade, it records the new state without recovery, because nobody
+else was involved. And it creates the add-on namespace with the label only when the namespace
+doesn't exist yet; it never labels a namespace that is already there.
+
+The e2e tests found three bugs here, all fixed. A failed status write lost the record, so the
+operator started the agents and deleted them again in a loop; agents now start only after the
+record is stored. Deleting a Klusterlet left its policies behind; they are now removed. And a
+deleted policy went unnoticed for up to five minutes, a window in which a fake agent pod could
+get an SVID; the operator now watches the policies and reacts within seconds. One limit remains:
+in the hosted modes, the policies on the managed cluster are still only checked every five minutes
+(`questions.md` Q20).

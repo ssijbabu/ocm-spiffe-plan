@@ -246,3 +246,29 @@ Test rows:
 ## Status (2026-11-13)
 
 Done, committed locally. See "Progress (Days 10-23)" in `questions.md` for the commit and findings.
+
+## In simple words: what changed and why
+
+Until Day 14, the SPIFFE listener could only be turned on by hand with flags. Day 14 taught the
+cluster-manager operator to do it from the `ClusterManager` settings of Day 2. When the admin
+sets `authType: spiffe` and turns the feature gate on, the operator starts the gRPC server with
+the SPIFFE listener, mounts the SPIRE agent's socket into the pod, creates a Service for the new
+port, opens that port in the hub's network policy, and passes the two delete guard durations to
+the hub.
+
+When `spiffe` is the only gRPC driver, the operator doesn't create the old `grpc` listener, its
+Service, its serving certificate or its config. This is the requirement in practice: a
+SPIFFE-only hub has no Secret with a key, a certificate or a token.
+
+The operator also does the checks the API server couldn't do on Day 2: that the server's ID is in
+the hub's trust domain, and that the templates are valid and don't overlap. If one fails, it
+deploys nothing for SPIFFE and writes the reason on the `ClusterManager`
+(`InvalidSPIFFEConfiguration`). The admin sees the mistake where they made it, not as a server
+that keeps crashing.
+
+A second change gives new agents the one permission they need before they are accepted: to
+create and read `ManagedCluster` objects. With the other drivers a bootstrap token gives this. Here
+there is no bootstrap step, so the permission is given to the group every SPIFFE agent is in, and
+the listener still limits each agent to the cluster named in its SVID. Any SVID from a trusted
+SPIRE that fits the template gets this permission, which is the same exposure as the bootstrap
+token today; we noted it for the proposal (`questions.md` Q12).

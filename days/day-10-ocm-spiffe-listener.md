@@ -263,3 +263,25 @@ Test rows:
 ## Status (2026-11-13)
 
 Done, committed locally. See "Progress (Days 10-23)" in `questions.md` for the commit and findings.
+
+## In simple words: what changed and why
+
+Day 10 was the first change in `ocm` itself. First we pointed `ocm` at our fork commits of `api`
+and `sdk-go`, in a commit of its own, so it is easy to remove once those changes are merged
+upstream.
+
+Then we added the SPIFFE listener to the hub's gRPC server. A listener is a port the server
+accepts connections on. The new one (port 8091) accepts only SPIFFE connections and uses only the
+SPIFFE authenticator. The existing `grpc` listener is not touched, and a new flag can turn it off
+for a hub that uses only `spiffe`. Keeping them apart means a mistake in the new code can't weaken
+the old driver, and the old driver's tokens and certificates can't be used on the new port.
+
+Both listeners serve the same data from the same place inside the server and use the same
+permission check. That was simpler than running two copies of everything, and it means a cluster
+behaves the same on either listener.
+
+The listener refuses to start if something is wrong: a bad trust domain, a bad server ID, a bad
+template, or no SVID with the server's ID from SPIRE. It is better for the hub to fail at start
+with a clear message than to run and refuse every agent later. The accepted trust domains and the
+two ID templates are passed in as flags, which the operator fills from the `ClusterManager` on
+Day 14.

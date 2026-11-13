@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 740" width="1200" height="740" font-family="Helvetica, Arial, sans-serif">
+<defs><marker id="ak" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#333"/></marker><marker id="ag" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#2e7d32"/></marker><marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#c62828"/></marker><marker id="ab" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#3a5bc7"/></marker></defs>
+<rect width="1200" height="740" fill="#ffffff"/>
+<text x="600.0" y="32" font-size="20" font-weight="bold" fill="#1a1a1a" text-anchor="middle">Use case: a cluster joins the hub with no token</text>
+<line x1="100" y1="96" x2="100" y2="720" stroke="#bbb" stroke-width="1" stroke-dasharray="4 4"/>
+<rect x="12" y="56" width="176" height="40" rx="6" fill="#fff4e5" stroke="#b26a00" stroke-width="1.3"/>
+<text x="100.0" y="80.0" font-size="12.5" font-weight="bold" fill="#1a1a1a" text-anchor="middle">Admin / platform</text>
+<line x1="300" y1="96" x2="300" y2="720" stroke="#bbb" stroke-width="1" stroke-dasharray="4 4"/>
+<rect x="212" y="56" width="176" height="40" rx="6" fill="#f3f6fc" stroke="#3a5bc7" stroke-width="1.3"/>
+<text x="300.0" y="80.0" font-size="12.5" font-weight="bold" fill="#1a1a1a" text-anchor="middle">Klusterlet operator</text>
+<line x1="490" y1="96" x2="490" y2="720" stroke="#bbb" stroke-width="1" stroke-dasharray="4 4"/>
+<rect x="402" y="56" width="176" height="40" rx="6" fill="#eef7ee" stroke="#2e7d32" stroke-width="1.3"/>
+<text x="490.0" y="80.0" font-size="12.5" font-weight="bold" fill="#1a1a1a" text-anchor="middle">SPIRE</text>
+<line x1="680" y1="96" x2="680" y2="720" stroke="#bbb" stroke-width="1" stroke-dasharray="4 4"/>
+<rect x="592" y="56" width="176" height="40" rx="6" fill="#f3f6fc" stroke="#3a5bc7" stroke-width="1.3"/>
+<text x="680.0" y="80.0" font-size="12.5" font-weight="bold" fill="#1a1a1a" text-anchor="middle">Registration agent</text>
+<line x1="880" y1="96" x2="880" y2="720" stroke="#bbb" stroke-width="1" stroke-dasharray="4 4"/>
+<rect x="792" y="56" width="176" height="40" rx="6" fill="#f5f2fa" stroke="#6a4c9c" stroke-width="1.3"/>
+<text x="880.0" y="80.0" font-size="12.5" font-weight="bold" fill="#1a1a1a" text-anchor="middle">Hub SPIFFE listener</text>
+<line x1="1090" y1="96" x2="1090" y2="720" stroke="#bbb" stroke-width="1" stroke-dasharray="4 4"/>
+<rect x="1002" y="56" width="176" height="40" rx="6" fill="#f5f2fa" stroke="#6a4c9c" stroke-width="1.3"/>
+<text x="1090.0" y="80.0" font-size="12.5" font-weight="bold" fill="#1a1a1a" text-anchor="middle">Hub controllers</text>
+<path d="M100,130 L300,130" fill="none" stroke="#333" stroke-width="1.5" marker-end="url(#ak)"/>
+<text x="200.0" y="123" font-size="11.5" font-weight="normal" fill="#222" text-anchor="middle" paint-order="stroke" stroke="#fff" stroke-width="4" stroke-linejoin="round">1. clusteradm join, no token</text>
+<rect x="180.9" y="146" width="238.2" height="60" rx="6" fill="#fffbe6" stroke="#b26a00" stroke-width="1.3"/>
+<text x="300" y="165" font-size="11.5" font-weight="normal" fill="#222" text-anchor="middle">2. install the admission policies,</text>
+<text x="300" y="181" font-size="11.5" font-weight="normal" fill="#222" text-anchor="middle">clean the namespaces,</text>
+<text x="300" y="197" font-size="11.5" font-weight="normal" fill="#222" text-anchor="middle">write the record to the status</text>
+<path d="M300,236 L100,236" fill="none" stroke="#333" stroke-width="1.5" marker-end="url(#ak)"/>
+<text x="200.0" y="229" font-size="11.5" font-weight="normal" fill="#222" text-anchor="middle" paint-order="stroke" stroke="#fff" stroke-width="4" stroke-linejoin="round">3. SPIFFEAdmissionReady, agent IDs</text>
+<path d="M100,282 L490,282" fill="none" stroke="#333" stroke-width="1.5" marker-end="url(#ak)"/>
+<text x="295.0" y="275" font-size="11.5" font-weight="normal" fill="#222" text-anchor="middle" paint-order="stroke" stroke="#fff" stroke-width="4" stroke-linejoin="round">4. create SPIRE entries for those IDs</text>
+<path d="M300,328 L680,328" fill="none" stroke="#333" stroke-width="1.5" marker-end="url(#ak)"/>
+<text x="490.0" y="321" font-size="11.5" font-weight="normal" fill="#222" text-anchor="middle" paint-order="stroke" stroke="#fff" stroke-width="4" stroke-linejoin="round">5. start the agent: --spiffe-agent-id, socket</text>
+<path d="M490,374 L680,374" fill="none" stroke="#333" stroke-width="1.5" marker-end="url(#ak)"/>
+<text x="585.0" y="367" font-size="11.5" font-weight="normal" fill="#222" text-anchor="middle" paint-order="stroke" stroke="#fff" stroke-width="4" stroke-linejoin="round">6. X.509-SVID, in memory</text>
+<path d="M680,420 L880,420" fill="none" stroke="#333" stroke-width="1.5" marker-end="url(#ak)"/>
+<text x="780.0" y="413" font-size="11.5" font-weight="normal" fill="#222" text-anchor="middle" paint-order="stroke" stroke="#fff" stroke-width="4" stroke-linejoin="round">7. mTLS; accept only hubSPIFFEID</text>
+<rect x="789.25" y="436" width="181.5" height="44" rx="6" fill="#fffbe6" stroke="#b26a00" stroke-width="1.3"/>
+<text x="880" y="455" font-size="11.5" font-weight="normal" fill="#222" text-anchor="middle">8. SPIFFE ID to OCM user;</text>
+<text x="880" y="471" font-size="11.5" font-weight="normal" fill="#222" text-anchor="middle">gate, SVID check, RBAC</text>
+<path d="M680,512 L880,512" fill="none" stroke="#333" stroke-width="1.5" marker-end="url(#ak)"/>
+<text x="780.0" y="505" font-size="11.5" font-weight="normal" fill="#222" text-anchor="middle" paint-order="stroke" stroke="#fff" stroke-width="4" stroke-linejoin="round">9. create ManagedCluster</text>
+<path d="M880,558 L1090,558" fill="none" stroke="#333" stroke-width="1.5" marker-end="url(#ak)"/>
+<text x="985.0" y="551" font-size="11.5" font-weight="normal" fill="#222" text-anchor="middle" paint-order="stroke" stroke="#fff" stroke-width="4" stroke-linejoin="round">10. pinned to the trust domain</text>
+<path d="M100,604 L1090,604" fill="none" stroke="#333" stroke-width="1.5" marker-end="url(#ak)"/>
+<text x="595.0" y="597" font-size="11.5" font-weight="normal" fill="#222" text-anchor="middle" paint-order="stroke" stroke="#fff" stroke-width="4" stroke-linejoin="round">11. clusteradm accept: hubAcceptsClient = true</text>
+<path d="M1090,650 L680,650" fill="none" stroke="#333" stroke-width="1.5" marker-end="url(#ak)"/>
+<text x="885.0" y="643" font-size="11.5" font-weight="normal" fill="#222" text-anchor="middle" paint-order="stroke" stroke="#fff" stroke-width="4" stroke-linejoin="round">12. accepted: permissions for the cluster</text>
+<rect x="582.95" y="668" width="194.1" height="44" rx="6" fill="#fffbe6" stroke="#b26a00" stroke-width="1.3"/>
+<text x="680" y="687" font-size="11.5" font-weight="normal" fill="#222" text-anchor="middle">13. the work agent connects</text>
+<text x="680" y="703" font-size="11.5" font-weight="normal" fill="#222" text-anchor="middle">with its own SVID</text>
+</svg>

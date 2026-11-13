@@ -222,3 +222,26 @@ git add -A && git commit -s -m ":sparkles: admission policy for SPIFFE agent nam
 ## Status (2026-11-13)
 
 Done, committed locally. See "Progress (Days 10-23)" in `questions.md` for the commit and findings.
+
+## In simple words: what changed and why
+
+Day 19 dealt with a risk that comes with SPIRE. SPIRE gives an agent's SVID to any pod that has
+the right namespace, ServiceAccount and label. So anyone who can start such a pod gets the
+agent's identity and can talk to the hub as that cluster. With the other drivers the credential
+is in a Secret, and reading the Secret is what has to be protected. Here, starting pods is what
+has to be protected.
+
+The operator now installs an admission policy for the agent namespace before any agent runs. An
+admission policy is a rule that the Kubernetes API server checks on every request. This one says:
+only the operator may create or change Deployments there; pods may only come from those
+Deployments, through Kubernetes' own controllers; each pod's role label must match its
+ServiceAccount for the install mode; and other kinds of workload (StatefulSet, DaemonSet, Job,
+CronJob) are not allowed at all. So the only pods that can get an agent's SVID are the ones the
+operator created.
+
+If the cluster doesn't support this kind of policy, the operator deploys no agents and reports
+why. Running agents without the policy would mean their identities are not protected.
+
+The rules are tested in a real API server. The test acts as the operator, as the built-in
+controllers and as an ordinary user, and checks who is allowed and who is refused. Days 19, 20
+and 21 are one commit (`c77e17fd1`).

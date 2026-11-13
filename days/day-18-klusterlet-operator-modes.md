@@ -228,3 +228,27 @@ Test rows:
 ## Status (2026-11-13)
 
 Done, committed locally. See "Progress (Days 10-23)" in `questions.md` for the commit and findings.
+
+## In simple words: what changed and why
+
+Day 18 taught the Klusterlet operator to deploy the agents for `spiffe`, in all four install
+modes. Until now the agents could only be started this way by hand. The operator now builds each
+agent's SPIFFE ID from the Klusterlet's template and passes it to the agent, mounts the SPIRE
+agent's socket into the pods, and mounts no bootstrap or hub kubeconfig Secret.
+
+It also puts a `spiffe-role` label on each agent pod (`registration`, `work` or `klusterlet`).
+SPIRE decides which pod gets which SVID by the pod's namespace, ServiceAccount and labels, so the
+label is what lets the platform team write one SPIRE entry per agent role.
+
+The modes differ in where the agents run and how many there are. `Default` and `Hosted` have two
+agents, `Singleton` and `SingletonHosted` have one. In the hosted modes the agents run on a
+management cluster, in a namespace named after the Klusterlet. The `{namespace}` in the ID is
+always the namespace the pods really run in, because that is what the SPIRE entry selects on.
+
+The operator writes the IDs it built into the Klusterlet status (`status.spiffe.agentIDs`), so
+the platform team can copy them into their SPIRE entries. If a template is invalid, it deploys no
+agents and writes the reason on the Klusterlet.
+
+Two old habits had to go. The operator used to stop the work agent and report a problem when the
+hub kubeconfig Secret was missing. With `spiffe` that Secret never exists, so the operator no
+longer does either.

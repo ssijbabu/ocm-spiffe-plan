@@ -240,3 +240,27 @@ What was built differs from Tasks 2-4 in these points:
   which the Klusterlet operator passes to the registration agent in spiffe mode (ocm `544c5e266`).
   Without it, namespaces aren't labeled and a warning is logged.
 - Task 6: no draft PR yet; the replace lines are local.
+
+## In simple words: what changed and why
+
+Day 23 changed `addon-framework`, the library most add-ons are built with. The aim was that
+add-on authors don't have to change their manifests for `spiffe`. The framework now adjusts what
+it deploys by itself when the cluster's add-ons use the `spiffe` driver. Where the add-on would
+mount the `<addon>-hub-kubeconfig` Secret, it mounts the `<addon>-spiffe` ConfigMap from Day 22,
+under the same name and path. It mounts the SPIRE agent's socket into the pods and gives them the
+label `spiffe-role: addon`. And it creates the add-on's namespace with the dedicated add-on label,
+which the policy from Day 20 only allows at creation.
+
+For that label the framework has to know the Klusterlet's name, and nothing on the hub carried
+it. So in `ocm` the registration agent now reports it in an annotation on the `ManagedCluster`.
+
+On the hub, the framework checks the identity an add-on asks for. An SVID always maps to one
+fixed user and set of groups. If an add-on asks for a different user or an extra group, it could
+never get it this way, so the framework reports that on the add-on
+(`SubjectNotSupportedBySPIFFE`) and doesn't leave it to fail without a reason.
+
+For add-on authors there is a small helper, `spiffeclient`. It reads the mounted settings and
+opens the connection to SPIRE, so an add-on agent can connect to the hub with its SVID in a few
+lines.
+
+The changes are committed locally; no draft pull request is opened yet.

@@ -566,3 +566,31 @@ sdk-go `3c59da31`, pushed to `fork/spire`. `pkg/spiffe/idtemplate` and
 - `api` is replaced with the fork commit:
   `replace open-cluster-management.io/api => github.com/ssijbabu/api v1.3.1-0.20261113090800-b805cf6c07e4`.
 - Each of the six sdk-go commits (Days 4–9) builds and passes `go vet` on its own.
+
+## In simple words: what changed and why
+
+Day 4 was the first code in `sdk-go`, the library that the hub and the agents share. We added
+go-spiffe, the official Go library for SPIFFE, so we don't write our own code for reading and
+checking SVIDs. We took version 2.9.0 and not the planned 2.6.0, because 2.6.0 has a bug where two
+parts of the program read the same data at the same time; our tests found it on Day 7.
+
+Then we wrote a small package, `idtemplate`, that understands the ID templates from Days 2 and 3.
+It can do three things: check that a template is valid, fill a template in to get an ID, and take
+an ID apart to get the cluster name, the role, the add-on and the agent name back. It knows
+nothing about OCM, so the hub, the Klusterlet operator, the add-on framework and clusteradm can
+all use the same code. If each had its own copy, they could disagree about what a template means,
+and the hub would refuse agents for no visible reason.
+
+A template has to follow some rules, and each rule is there for safety. Each placeholder fills a
+whole part of the path and appears only once, so there is only one way to read an ID. At least one
+part of the path is fixed text, so a template can't match every ID in a trust domain. No ID may
+match both the agent template and the add-on template, because then the hub couldn't tell an
+agent from an add-on. And the hub's own ID must match neither, so an agent can never show up with
+the hub's identity.
+
+Last, we wrote `IDScheme`, which turns an agent's SPIFFE ID into an OCM user and groups. These
+are the same user and group names OCM already uses with the other drivers, so the permissions
+that exist on the hub today work without any change. It refuses every ID from a trust domain that
+is not on the list, and every ID that matches neither template. The `{namespace}` part of an ID is
+only kept for logs and never used to decide what an agent may do, because the hub has no way to
+check it.
