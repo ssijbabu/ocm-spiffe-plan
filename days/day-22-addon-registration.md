@@ -156,3 +156,9 @@ The replace lines in go.mod are temporary."
 ## Update: multiple agent trust domains
 
 Add-on agents must be in the trust domain their cluster is pinned to. In hosted modes that is the management cluster's: a hosted add-on on the management cluster is in it; an add-on agent on the managed cluster itself is accepted only if that cluster's SPIRE is also in that trust domain.
+
+## Update: agent ID templates
+
+No change. The hub's subject check compares the `kubeClient` subject with the user and groups an
+add-on SVID maps to. The add-on template changes only the layout of the ID, never the user and
+groups, so a default subject still passes and a custom user such as `my-team-bot` still fails.

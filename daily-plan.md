@@ -18,12 +18,15 @@ This plan turns the enhancement proposal into code, one working day at a time.
 Each day has its own document in [days/](days/), with inputs, steps, full examples and expected
 output for every task. Run Go through [tools/dgo](tools/dgo).
 
+SPIRE entries for every workload and mode, and how they follow the agent ID templates:
+[clusterspiffeid.md](clusterspiffeid.md).
+
 | Day | Document | Repo |
 | --- | --- | --- |
 | 1 | [Set up](days/day-01-setup.md) | all |
 | 2 | [API: ClusterManager and feature gate](days/day-02-api-clustermanager.md) | api |
 | 3 | [API: Klusterlet, status, add-on](days/day-03-api-klusterlet-addon.md) | api |
-| 4 | [SPIFFE ID mapping](days/day-04-sdkgo-id-mapping.md) | sdk-go |
+| 4 | [SPIFFE ID templates and mapping](days/day-04-sdkgo-id-mapping.md) | sdk-go |
 | 5 | [SPIFFE authenticator](days/day-05-sdkgo-authenticator.md) | sdk-go |
 | 6 | [Fake Workload API](days/day-06-sdkgo-fake-workload-api.md) | sdk-go |
 | 7 | [SVID picking and client TLS](days/day-07-sdkgo-svid-picker-client.md) | sdk-go |
@@ -104,9 +107,12 @@ Done: api `aaceeb2d`, `c77b5174`, `4d9027ee`, `1fa143c5` and `dddccc02`. The hub
       is a SPIFFE ID. That `serverSPIFFEID` is in `trustDomain` can't be a CEL rule (cost budget,
       see `questions.md` Q4); the operator checks it on Day 14.
 - [x] Run `make update` (codegen and CRDs).
+- [x] Add `agentIDTemplate` and `addOnAgentIDTemplate` (defaults: the proposal's scheme), with a
+      shape pattern and `Get...` helpers. The full checks are the operator's (Day 14). See the
+      day document, "Update: agent ID templates", and `questions.md` Q7.
 
 **Done when:** `make verify` passes, and integration tests in `test/integration/api` cover valid
-and invalid ClusterManager specs.
+and invalid ClusterManager specs, including the templates.
 
 ### Day 3: API, Klusterlet and add-on (`api`)
 
@@ -126,33 +132,36 @@ yet.
 - [x] Add the ManagedCluster annotation constant `open-cluster-management.io/spiffe-trust-domain`.
 - [x] Allow `spiffe` as the add-on driver in `ManagedClusterAddOn` `v1beta1` and `v1alpha1`.
 - [x] Run `make update` and `make verify` (lint with `DGO_IMAGE=golang:1.26`).
+- [x] Add `agentIDTemplate` and `addOnAgentIDTemplate` to the Klusterlet's `spiffe` block, with
+      CEL checks for the required placeholders; add `status.spiffe.agentIDs`; require
+      `clusterName` with `spiffe`. Coded and tested (247 of 247); not committed yet.
 
 **Done when:** API integration tests pass (202 of 202), the commit is pushed to the fork, and the
 `api` PR is opened as a draft.
 
-### Day 4: SPIFFE ID mapping (`sdk-go`, `pkg/server/grpc/authn`)
+### Day 4: SPIFFE ID templates and mapping (`sdk-go`, `pkg/spiffe/idtemplate`, `pkg/server/grpc/authn`)
 
 - [ ] Add `github.com/spiffe/go-spiffe/v2` to `go.mod`.
-- [ ] Add a parser for the proposal's ID scheme:
-  - `.../ocm/hub/grpc-server`;
-  - `.../ocm/cluster/<cluster>/agent/{registration,work,klusterlet}`;
-  - `.../ocm/cluster/<cluster>/addon/<addon>/agent/<agent>`.
-- [ ] Map each ID to the user and groups in the proposal's ID-scheme table, plus
-      `system:authenticated`.
-- [ ] Accept IDs from any trust domain in `agentTrustDomains`, and return the SVID's trust domain
-      with the identity (used for pinning on Day 11).
-- [ ] Reject IDs from a trust domain not in `agentTrustDomains`, unknown paths, empty segments and
-      extra segments.
-- [ ] Write table tests for every valid and invalid form.
+- [ ] Add `pkg/spiffe/idtemplate`: `Compile` (prefix `spiffe://{trustDomain}/`, known and
+      required placeholders, whole segments, each once, at least one fixed segment), `Render`,
+      `Match` and `Overlaps`.
+- [ ] Add `IDScheme` (agent template, add-on template, `agentTrustDomains`) with `Parse`, which maps
+      an ID to the user and groups in the proposal's ID-scheme table, plus `system:authenticated`,
+      and returns the SVID's trust domain (pinning, Day 11). `{namespace}` is checked and returned
+      for logs only.
+- [ ] Add `CheckServerID`: the hub's ID must match neither template.
+- [ ] Reject IDs from a trust domain not in `agentTrustDomains`, and IDs that match neither template.
+- [ ] Write table tests for the templates, and for `Parse` with the default and a custom template.
 
-**Done when:** the tests cover every row of the proposal's mapping table; an ID from
-`east.example.org` is accepted when listed; and an unlisted trust domain and a path like
-`.../ocm/something-else` are rejected.
+**Done when:** with the default templates the tests cover every row of the proposal's mapping
+table; an ID from `east.example.org` is accepted when listed; an unlisted trust domain, a path like
+`.../ocm/something-else` and a generic `/ns/.../sa/...` ID are rejected; and the custom template
+`spiffe://{trustDomain}/k8s/{cluster}/ns/{namespace}/ocm/{role}` maps to the same users.
 
 ### Day 5: SPIFFE authenticator (`sdk-go`, `pkg/server/grpc/authn`)
 
 - [ ] Add `SPIFFEAuthenticator`, next to `mtls.go` and `token.go`. It reads the verified peer
-      SVID from the TLS state, maps it, and puts the user, groups, SPIFFE ID and SVID expiry into
+      SVID from the TLS state, maps it with the `IDScheme` from Day 4, and puts the user, groups, SPIFFE ID and SVID expiry into
       the request context.
 - [ ] Add unit and stream interceptors that reject an RPC whose peer SVID has already expired.
 - [ ] Write unit tests: a valid SVID, an expired SVID, a missing peer certificate, and a
@@ -190,7 +199,8 @@ it, and see the new one.
 ### Day 8: server TLS and connection registry (`sdk-go`, `pkg/server/grpc`)
 
 - [ ] Add server TLS from `tlsconfig.MTLSServerConfig`, with an authorizer that accepts any trust
-      domain in `agentTrustDomains` (`authorizeMemberOfAny`), not just the hub's.
+      domain in `agentTrustDomains` (`authorizeMemberOfAny`, from `IDScheme.TrustDomains()`), not
+      just the hub's. The credentials wrapper maps peers with `IDScheme.Parse`.
 - [ ] Have the registry also close every connection of one trust domain (`CloseTrustDomain`).
 - [ ] Add a `TransportCredentials` wrapper. After each handshake it records the peer's SPIFFE ID
       and SVID expiry, and registers the `net.Conn` in a connection registry.
@@ -221,6 +231,9 @@ and open the `sdk-go` PR as a draft.
 - [ ] When `grpc` is also listed, keep that listener unchanged on its current port.
 - [ ] Have both listeners share the same CloudEvents services and authorizer.
 - [ ] Add `--spiffe-agent-trust-domains` (default: the hub's trust domain) for the SPIFFE listener.
+- [ ] Add `--spiffe-agent-id-template` and `--spiffe-addon-agent-id-template` (defaults: the
+      proposal's scheme). Build the `IDScheme` at start and refuse to start on a bad template or a
+      server ID that matches one.
 
 **Done when:** the hub starts with only `spiffe`, and with `spiffe` plus `grpc`, and
 `go build ./...` passes.
@@ -234,6 +247,7 @@ and open the `sdk-go` PR as a draft.
 - [ ] For add-on agents, also check the add-on name: the agent of `my-addon` cannot touch
       `other-addon`.
 - [ ] Send the mapped groups, including `system:authenticated`, in the SubjectAccessReviews.
+- [ ] Never authorize on the `{namespace}` value from the ID template.
 - [ ] Pin each cluster to one trust domain: the gRPC cluster service sets
       `open-cluster-management.io/spiffe-trust-domain` from the SVID when the cluster is created
       and keeps it on agent updates; every request is refused unless the SVID's trust domain
@@ -274,6 +288,8 @@ including a SPIRE clock that runs ahead and a newer SVID with a longer TTL.
 - [ ] Add the Service `cluster-manager-grpc-server-spiffe` for the `grpc-spiffe` endpoint
       exposure.
 - [ ] When `grpc` is removed from the drivers, remove its listener and Secrets.
+- [ ] Pass both ID templates to the gRPC server. Check them with `IDScheme` (and the server ID
+      with `CheckServerID`); on error, render no SPIFFE listener and set `Degraded`.
 
 **Done when:** manifest tests cover `spiffe` only and `spiffe` plus `grpc`, and no hub Secret
 holds key material in `spiffe` only mode.
@@ -285,6 +301,7 @@ holds key material in `spiffe` only mode.
       the delete guard.
 - [ ] Check that no Secret or ConfigMap with key material or hub credentials is created on the
       hub.
+- [ ] Run one registration flow against a second gRPC server with a custom agent ID template.
 
 **Done when:** the new integration test passes, and the existing registration integration suite
 still passes.
@@ -296,6 +313,8 @@ still passes.
 - [ ] Add the new driver next to `csr`, `grpc` and `aws_irsa`. It builds the gRPC clients from
       the SVID and has no CSR step, no Secret and no bootstrap phase.
 - [ ] Register it in `register/factory`.
+- [ ] Take the agent's own ID from `--spiffe-agent-id` (rendered by the operator, Day 18); don't
+      build it in the agent.
 - [ ] Make sure the registration agent doesn't start the Secret-based hub-kubeconfig controller in
       `spiffe` mode.
 
@@ -303,8 +322,9 @@ still passes.
 
 ### Day 17: work agent and singleton agent (`ocm`)
 
-- [ ] Have the work agent fetch its own SVID (`.../agent/work`) instead of reading a Secret.
-- [ ] Have the singleton agent use `.../agent/klusterlet`.
+- [ ] Have the work agent fetch its own SVID (role `work`, from `--spiffe-agent-id`) instead of
+      reading a Secret.
+- [ ] Have the singleton agent use its `klusterlet` ID from `--spiffe-agent-id`.
 - [ ] Have each agent report not ready when its expected SVID is missing.
 
 **Done when:** an integration test applies a ManifestWork and syncs its status over the SPIFFE
@@ -315,6 +335,9 @@ listener.
 - [ ] Render the agent Deployments with the CSI volume and the `open-cluster-management.io/spiffe-role`
       label for `Default`, `Singleton`, `Hosted` and `SingletonHosted`.
 - [ ] Create no `bootstrap-hub-kubeconfig` and no `hub-kubeconfig-secret` in `spiffe` mode.
+- [ ] Render each agent's `--spiffe-agent-id` from the Klusterlet's `agentIDTemplate` (trust
+      domain, cluster name, role, and the namespace the pods run in), report the IDs in
+      `status.spiffe.agentIDs`, and set `Degraded` on a bad template.
 - [ ] In hosted modes, keep the `external-managed-kubeconfig` handling as it is today (Open
       Question 5).
 
@@ -398,7 +421,8 @@ an add-on. Push the change and open the `ocm` PR as a draft.
 ### Day 23: addon-framework
 
 - [ ] Point it at the fork commits with `replace` lines.
-- [ ] Add a helper that builds an add-on agent's gRPC clients from its SVID.
+- [ ] Add a helper that builds an add-on agent's gRPC clients from its SVID, rendering its ID from
+      `addOnAgentIDTemplate` (how the template reaches the agent: `questions.md` Q8).
 - [ ] When the cluster uses the `spiffe` add-on driver, render Deployments, DaemonSets and
       StatefulSets with the CSI volume and `spiffe-role: addon`, instead of the
       `<addon>-hub-kubeconfig` Secret volume.
@@ -417,6 +441,9 @@ an add-on. Push the change and open the `ocm` PR as a draft.
 - [ ] `accept`: no CSR to approve in `spiffe` mode. `--spiffe-trust-domain` confirms the
       cluster's pinned trust domain, or sets it when missing.
 - [ ] Make `--singleton` and `--mode hosted` work with `spiffe`.
+- [ ] `init` and `join`: add `--spiffe-agent-id-template` and `--spiffe-addon-agent-id-template`,
+      checked locally. `join` requires `--cluster-name` with `spiffe` and prints the agent IDs the
+      platform must issue.
 
 **Done when:** unit tests cover flag validation and the rendered Klusterlet for each mode. Open the
 `clusteradm` PR as a draft.
@@ -436,8 +463,8 @@ an add-on. Push the change and open the `ocm` PR as a draft.
 
 - [ ] Write a script that creates kind clusters with SPIRE from the SPIFFE Helm charts: `spire-crds`
       0.6.1 and `spire` 0.30.4, matching ocm-hub.
-- [ ] Use `ClusterSPIFFEID`s for the gRPC server, the agents and one add-on, following the
-      proposal's examples.
+- [ ] Use `ClusterSPIFFEID`s for the gRPC server, the agents and one add-on, following
+      `plan/clusterspiffeid.md` (with `className`), plus a second set for a custom ID template.
 - [ ] Cover both cases: a spoke in the hub's trust domain, and a spoke in its own trust domain
       (`east.example.org`) federated with the hub's. This is open question 4: pick the reference
       SPIRE topology here and record it.
@@ -449,6 +476,7 @@ bundle, and an agent pod on each gets its SVID.
 
 - [ ] Run join, accept, ManifestWork apply and status, add-on enable and status sync, SVID rotation
       under load, cluster revocation and single add-on revocation.
+- [ ] Switch a live cluster to a custom agent ID template and check it recovers on its own.
 
 **Done when:** both modes pass.
 
@@ -457,6 +485,8 @@ bundle, and an agent pod on each gets its SVID.
 - [ ] Run the same flows with a management cluster.
 - [ ] Test two Klusterlets on one management cluster, and recovery of one leaving the other
       running.
+- [ ] Use the custom template, so `{namespace}` is the Klusterlet's namespace on the management
+      cluster.
 
 **Done when:** both modes pass.
 
@@ -476,6 +506,8 @@ bundle, and an agent pod on each gets its SVID.
 - [ ] Run `make verify` and the full unit and integration suites in every repo.
 - [ ] Mark the PRs ready, in order: `api`, `sdk-go`, `ocm`, `addon-framework`, `clusteradm`. In
       each, link the enhancement PR #203 and the PRs it depends on.
+- [ ] Update the proposal's editable sections for the agent ID templates (API, hub setup, Open
+      Question 1, Risks); raise the frozen ID-scheme table with the reviewers.
 - [ ] Update the proposal's Implementation History with the PR links. That section comes after
       the frozen part, so it can be edited.
 
@@ -488,7 +520,8 @@ the most likely to overrun.
 
 Left open by the proposal; don't build these without a decision:
 
-- Open question 1: should the SPIFFE ID scheme be configurable?
+- Open question 1 is decided: the ID layout is configurable with agent ID templates
+  (`questions.md` Q7).
 - Open question 2: should clusters be auto-accepted?
 - Open question 3: should the agent create the `ManagedCluster`, or the admin?
 - Open question 5: replacing the `external-managed-kubeconfig` in hosted modes.

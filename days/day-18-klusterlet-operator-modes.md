@@ -171,3 +171,56 @@ spec:
 ## Update: multiple agent trust domains
 
 Render `--spiffe-trust-domain={{ .SPIFFETrustDomain }}` for every agent. In hosted modes it is the management cluster's trust domain, because the agents get their SVIDs there.
+
+## Update: agent ID templates
+
+The operator renders each agent's full SPIFFE ID from the Klusterlet's `agentIDTemplate` and
+passes it as `--spiffe-agent-id` (Days 16–17). This replaces `--spiffe-trust-domain` in the
+update above for ID building.
+
+**Config fields:** `SPIFFERegistrationAgentID`, `SPIFFEWorkAgentID`, `SPIFFEKlusterletAgentID`,
+filled in the controller:
+
+```go
+tmpl, err := idtemplate.Compile(idtemplate.KindAgent, cfg.GetAgentIDTemplate())
+// also Compile the add-on template and check !idtemplate.Overlaps(agent, addOn)
+values := map[string]string{
+	idtemplate.Cluster:   klusterlet.Spec.ClusterName,
+	idtemplate.Namespace: agentNamespace, // open-cluster-management-agent, or the Klusterlet name in hosted modes
+}
+render := func(role string) (string, error) {
+	values[idtemplate.Role] = role
+	id, err := tmpl.Render(agentTrustDomain, values) // spiffe.trustDomain, or the trust domain of hubSPIFFEID
+	return id.String(), err
+}
+```
+
+Render only the roles the mode uses: `registration` and `work` in `Default` and `Hosted`,
+`klusterlet` in `Singleton` and `SingletonHosted`. `{namespace}` is the namespace the agent pods
+run in: the agent namespace on the managed cluster, or the Klusterlet's namespace on the
+management cluster in hosted modes. That's the namespace the platform's SPIRE entry selects on.
+
+**Args**, per Deployment:
+
+```yaml
+          - "--spiffe-agent-id={{ .SPIFFEWorkAgentID }}"   # registration: .SPIFFERegistrationAgentID; singleton: .SPIFFEKlusterletAgentID
+```
+
+**Errors:** an invalid template, overlapping templates, or a render error (for example an empty
+`clusterName` that slipped past the CRD) render no agents and set `Degraded=True` with reason
+`InvalidSPIFFEConfiguration` and the error as message.
+
+**Expose the rendered IDs** in the Klusterlet status, `status.spiffe.agentIDs` (role → ID), so the
+platform team can copy them into their `ClusterSPIFFEID`s without working out the template by
+hand. Nothing in it is secret. This needs a small API addition; do it with the Day 2/3 template
+update.
+
+Test rows:
+
+| Mode | Template | Expected `--spiffe-agent-id` |
+| --- | --- | --- |
+| `Default`, cluster1, hub's trust domain | default | registration `spiffe://ocm-hub.example.org/ocm/cluster/cluster1/agent/registration`, work `.../agent/work` |
+| `Singleton`, cluster1 | default | `spiffe://ocm-hub.example.org/ocm/cluster/cluster1/agent/klusterlet` only |
+| `Hosted`, cluster4 on mgmt1, `east.example.org` | `spiffe://{trustDomain}/k8s/{cluster}/ns/{namespace}/ocm/{role}` | registration `spiffe://east.example.org/k8s/cluster4/ns/cluster4/ocm/registration` |
+| `Default`, agent namespace `team-a-ocm` | same | work `spiffe://ocm-hub.example.org/k8s/cluster1/ns/team-a-ocm/ocm/work` |
+| any | `spiffe://{trustDomain}/ocm/{clutser}/{role}` | no agents; `Degraded`, `InvalidSPIFFEConfiguration` |

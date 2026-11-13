@@ -65,7 +65,7 @@ Tests:
 - e2e: kind + SPIRE 1.15.5, all four install modes (see results table)
 
 Not in this PR:
-- Open questions 1, 2, 3, 5, 6 of the proposal.
+- Open questions 2, 3, 5, 6 of the proposal. (Open question 1 is answered: agent ID templates.)
 ```
 
 ## Task 4: update the proposal
@@ -106,3 +106,21 @@ questions:
 | Five PRs ready for review | CI green |
 | Proposal links them | Implementation History updated |
 | Follow-ups | `plan/follow-ups.md` |
+
+## Update: agent ID templates
+
+The templates go beyond the proposal on `spire` (`questions.md` Q7). Before marking the PRs ready,
+update the proposal's editable sections, **before** the Implementation History edit in Task 4:
+
+- **API:** add `agentIDTemplate` and `addOnAgentIDTemplate` to the ClusterManager and Klusterlet
+  field tables, with defaults, placeholders and rules; add `status.spiffe.agentIDs`; note that
+  `clusterName` is required with `spiffe`.
+- **Hub setup / gRPC server:** the hub parses agent IDs with the templates; `{namespace}` is never
+  used for authorization; the server ID must match neither template.
+- **Open Questions:** mark Open Question 1 answered, pointing to the API section.
+- **Risks:** changing a template on a live hub interrupts every cluster until its Klusterlet
+  matches.
+
+The frozen "SPIFFE ID scheme" table still says the hub rejects IDs that don't match "this scheme".
+With the defaults that's still true. Raise the custom-template case with the reviewers on PR #203
+instead of editing the frozen text.

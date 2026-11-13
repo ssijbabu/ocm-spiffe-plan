@@ -112,3 +112,13 @@ git add -A && git commit -s -m ":sparkles: work and singleton agents connect wit
 ## Update: multiple agent trust domains
 
 The work and singleton agents also take `--spiffe-trust-domain` and build their IDs in it.
+
+## Update: agent ID templates
+
+As on Day 16: the work and singleton agents take `--spiffe-agent-id`, rendered by the operator,
+instead of building `.../agent/work` or `.../agent/klusterlet` themselves. Replace
+`o.SPIFFE.AgentID(o.SpokeClusterName, "work")` with `o.SPIFFE.AgentSPIFFEID`. The singleton
+agent runs the registration and work parts in one process with one SVID, so it takes one
+`--spiffe-agent-id` (the `klusterlet` role).
+
+This replaces the "multiple agent trust domains" update above.

@@ -208,3 +208,10 @@ connection when the SVID expires or when asked to close a cluster or add-on."
 ## Update: multiple agent trust domains
 
 Server TLS uses `tlsconfig.MTLSServerConfig(src, src, authorizeMemberOfAny(agentTrustDomains))` instead of `AuthorizeMemberOf(td)`; write `authorizeMemberOfAny` as a small `tlsconfig.Authorizer`. Even if the hub's SPIRE federates with more domains, only listed ones get in. The registry also needs `CloseTrustDomain(td)` for when a domain is removed from the list.
+
+## Update: agent ID templates
+
+`trackingCreds` holds the `*authn.IDScheme` instead of a trust domain and calls
+`c.scheme.Parse(sid)`. Build the server TLS authorizer from `scheme.TrustDomains()`, so the list of
+trust domains has one source. The registry keys connections by `OCMIdentity.ClusterName` and
+`AddOnName` as before; `Namespace` is never a key.

@@ -204,3 +204,41 @@ No `grpc-server-serving-cert` Secret, no `cluster-manager-grpc-server` Service.
 Pass `--spiffe-agent-trust-domains` to the gRPC server from `agentTrustDomains`, defaulting to `[trustDomain]` when empty. Test rows: three domains rendered in order; empty list renders the hub's domain.
 
 Always get the accepted trust domains from `SPIFFERegistrationConfig.GetAgentTrustDomains()` (api `1fa143c5`). It adds the hub's own trust domain whether or not the admin listed it, so never read `AgentTrustDomains` directly.
+
+## Update: agent ID templates
+
+**Config fields:** add `SPIFFEAgentIDTemplate` and `SPIFFEAddOnAgentIDTemplate`, filled from
+`GetAgentIDTemplate()` and `GetAddOnAgentIDTemplate()` (never read the fields directly; objects
+from fakes aren't defaulted).
+
+**Deployment args**, inside `{{ if .SPIFFEAuthEnabled }}`:
+
+```yaml
+          - "--spiffe-agent-id-template={{ .SPIFFEAgentIDTemplate }}"
+          - "--spiffe-addon-agent-id-template={{ .SPIFFEAddOnAgentIDTemplate }}"
+```
+
+**Validation:** the CRD only checks the templates' shape (Q4). Next to the `serverSPIFFEID` check,
+build the scheme the gRPC server will build and check the server ID against it:
+
+```go
+scheme, err := authn.NewIDScheme(cfg.GetAgentIDTemplate(), cfg.GetAddOnAgentIDTemplate(), cfg.GetAgentTrustDomains())
+if err == nil {
+	err = scheme.CheckServerID(serverID)
+}
+if err != nil {
+	// render nothing for SPIFFE; Degraded=True, reason InvalidSPIFFEConfiguration, message err.Error()
+}
+```
+
+So a bad template shows up on the ClusterManager instead of as a crash-looping gRPC server.
+
+Test rows:
+
+| Case | `spiffe` block | Expected |
+| --- | --- | --- |
+| Defaults | `trustDomain` only | args contain both default templates |
+| Custom | `agentIDTemplate: spiffe://{trustDomain}/k8s/{cluster}/ns/{namespace}/ocm/{role}` | args contain it, quoted as one argument |
+| Unknown placeholder | `agentIDTemplate: spiffe://{trustDomain}/ocm/{clutser}/{role}` | `Degraded`, `InvalidSPIFFEConfiguration`, message names `{clutser}`; no SPIFFE listener rendered |
+| Overlap | `agentIDTemplate: .../ocm/{cluster}/x/{role}`, `addOnAgentIDTemplate: .../ocm/{cluster}/{addon}/{agent}` | `Degraded`, `can match the same SPIFFE ID` |
+| Server ID matches | `serverSPIFFEID: spiffe://ocm-hub.example.org/ocm/cluster/hub/agent/work` | `Degraded`, `agents could present it` |

@@ -98,3 +98,13 @@ Add two columns (`Hosted`, `SingletonHosted`) to `plan/e2e-results.md`, and rows
 git add -A && git commit -s -m ":white_check_mark: e2e for SPIFFE registration in hosted modes"
 git push origin spire
 ```
+
+## Update: agent ID templates
+
+Leave the hub on the custom template from Day 27, Task 7. The hub accepts one template at a time,
+so cluster4 (Hosted) and cluster5 (SingletonHosted) use it from the start, on their Klusterlets
+and in their entries on mgmt1. Their `{namespace}` is the Klusterlet's namespace on the
+management cluster: the operator renders
+`spiffe://east.example.org/k8s/cluster4/ns/cluster4/ocm/registration` and
+`spiffe://east.example.org/k8s/cluster5/ns/cluster5/ocm/klusterlet`. This checks that
+`{namespace}` is the namespace the agent pods actually run in, in hosted mode.

@@ -1,6 +1,6 @@
 # Day 2: API, ClusterManager driver and feature gate
 
-**Status:** done. api commits `aaceeb2d` (driver and feature gate), `c77b5174` (agent trust
+**Status:** done. "Update: agent ID templates" is coded and tested (2026-11-13), not committed yet. api commits `aaceeb2d` (driver and feature gate), `c77b5174` (agent trust
 domains), `4d9027ee` (comments), `1fa143c5` (hub's trust domain always accepted, full rule
 coverage), `dddccc02` (helper test), on `fork/spire`.
 
@@ -461,3 +461,97 @@ stays empty (the operator computes it). With `agentTrustDomains` left out, only
 
 - [x] No field holds a key, certificate or token.
 - [x] Everything is behind `SPIFFERegistration`.
+
+## Update: agent ID templates (coded, not committed)
+
+**Decision (2026-11-13):** the SPIFFE ID layout of agents is configurable with two templates, one
+for Klusterlet agents and one for add-on agents. This answers the proposal's Open Question 1;
+see `questions.md` Q7. The defaults are the proposal's scheme, so nothing changes for a hub
+that doesn't set them.
+
+### Task U1: add the template fields
+
+**Input:** `operator/v1/types_clustermanager.go`, `SPIFFERegistrationConfig`.
+
+**Change:** add two constants next to `SPIFFEAuthType`, and two fields after `agentTrustDomains`.
+
+```go
+const (
+	// DefaultSPIFFEAgentIDTemplate is the SPIFFE ID layout of Klusterlet agents from
+	// enhancement #199.
+	DefaultSPIFFEAgentIDTemplate = "spiffe://{trustDomain}/ocm/cluster/{cluster}/agent/{role}"
+	// DefaultSPIFFEAddOnAgentIDTemplate is the SPIFFE ID layout of add-on agents.
+	DefaultSPIFFEAddOnAgentIDTemplate = "spiffe://{trustDomain}/ocm/cluster/{cluster}/addon/{addon}/agent/{agent}"
+)
+```
+
+```go
+	// agentIDTemplate is the layout of Klusterlet agent SPIFFE IDs. The hub reads the cluster
+	// and the agent role from it. It must start with spiffe://{trustDomain}/, where
+	// {trustDomain} is any of agentTrustDomains. Path placeholders: {cluster} and {role}
+	// (required) and {namespace} (optional; the agent's namespace, never used for
+	// authorization). Each placeholder fills a whole path segment and appears at most once,
+	// and at least one segment is fixed text. The Klusterlets must use the same template.
+	// +optional
+	// +kubebuilder:default:="spiffe://{trustDomain}/ocm/cluster/{cluster}/agent/{role}"
+	// +kubebuilder:validation:MaxLength=512
+	// +kubebuilder:validation:Pattern=`^spiffe://\{trustDomain\}(/([A-Za-z0-9._-]+|\{[A-Za-z]+\}))+$`
+	AgentIDTemplate string `json:"agentIDTemplate,omitempty"`
+
+	// addOnAgentIDTemplate is the layout of add-on agent SPIFFE IDs. Path placeholders:
+	// {cluster}, {addon} and {agent} (required) and {namespace} (optional; the add-on's
+	// install namespace, never used for authorization). The same rules as agentIDTemplate
+	// apply, and no SPIFFE ID may match both templates.
+	// +optional
+	// +kubebuilder:default:="spiffe://{trustDomain}/ocm/cluster/{cluster}/addon/{addon}/agent/{agent}"
+	// +kubebuilder:validation:MaxLength=512
+	// +kubebuilder:validation:Pattern=`^spiffe://\{trustDomain\}(/([A-Za-z0-9._-]+|\{[A-Za-z]+\}))+$`
+	AddOnAgentIDTemplate string `json:"addOnAgentIDTemplate,omitempty"`
+```
+
+The pattern only checks the shape. Known and required placeholders, duplicates, at least one
+fixed segment, and no overlap between the two templates can't be CEL rules here (cost budget,
+Q4). The cluster-manager operator checks them with sdk-go's `idtemplate` package (Day 4) and sets
+`Degraded` (Day 14).
+
+**Helpers** in `funcs_clustermanager.go`, like `GetAgentTrustDomains`, for objects that were not
+defaulted by the API server (unit tests, fake clients):
+
+```go
+// GetAgentIDTemplate returns agentIDTemplate, or the default when it is empty.
+func (c *SPIFFERegistrationConfig) GetAgentIDTemplate() string {
+	return cmp.Or(c.AgentIDTemplate, DefaultSPIFFEAgentIDTemplate)
+}
+
+// GetAddOnAgentIDTemplate returns addOnAgentIDTemplate, or the default when it is empty.
+func (c *SPIFFERegistrationConfig) GetAddOnAgentIDTemplate() string {
+	return cmp.Or(c.AddOnAgentIDTemplate, DefaultSPIFFEAddOnAgentIDTemplate)
+}
+```
+
+### Task U2: tests
+
+Add to `test/integration/api/clustermanager_spiffe_test.go`:
+
+| Case | `spiffe` block | Expected |
+| --- | --- | --- |
+| Defaults | `trustDomain` only | both templates filled with the defaults |
+| Custom with namespace | `agentIDTemplate: spiffe://{trustDomain}/k8s/{cluster}/ns/{namespace}/ocm/{role}` | accepted, kept as given |
+| Wrong prefix | `agentIDTemplate: spiffe://ocm-hub.example.org/ocm/{cluster}/{role}` | refused, `should match` |
+| Placeholder inside a segment | `agentIDTemplate: spiffe://{trustDomain}/ocm/cluster-{cluster}/{role}` | refused, `should match` |
+| Bad character | `addOnAgentIDTemplate: spiffe://{trustDomain}/ocm/{cluster}/{addon}/{agent}?x` | refused, `should match` |
+
+Unknown or missing placeholders (`{clutser}`, no `{role}`) pass the CRD and are the operator's
+job; leave them to Day 14's tests.
+
+Add a unit test for both helpers: empty returns the default, set returns the value.
+
+**Run:** `dgo 'make update && make test-api-integration'`, then `make verify` with
+`DGO_IMAGE=golang:1.26`, then commit:
+
+```shell
+git add -A && git commit -s -m ":sparkles: configurable SPIFFE ID templates for agents and add-on agents"
+git push fork spire
+```
+
+Then move the `replace` lines in `sdk-go` and `ocm` to the new SHA.

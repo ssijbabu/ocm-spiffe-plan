@@ -163,3 +163,33 @@ gh pr create -R open-cluster-management-io/clusteradm --draft --head ssijbabu:sp
 ## Update: multiple agent trust domains
 
 `init` gets `--spiffe-agent-trust-domains` (sets `agentTrustDomains`), `join` gets `--spiffe-trust-domain` (sets the Klusterlet's `trustDomain`), and `accept` gets `--spiffe-trust-domain`, which refuses to accept a cluster whose annotation differs, and sets it when it is missing.
+
+## Update: agent ID templates
+
+- `init` gets `--spiffe-agent-id-template` and `--spiffe-addon-agent-id-template` (set the
+  ClusterManager's `agentIDTemplate` and `addOnAgentIDTemplate`; left out, the CRD defaults
+  apply).
+- `join` gets the same two flags (set the Klusterlet's fields). With `spiffe`, `join` can't read
+  the hub's templates (it has no hub credential), so the admin must pass the same values on both
+  sides. Say so in both flags' help text.
+- `join` with `spiffe` requires `--cluster-name` (the Klusterlet CRD now refuses an empty one).
+- After the Klusterlet is applied, `join` prints the IDs the platform must issue, from
+  `status.spiffe.agentIDs` (Day 18), next to the `SPIFFEAdmissionReady` message:
+
+  ```text
+  Create SPIRE entries for these SPIFFE IDs, after SPIFFEAdmissionReady:
+    registration  spiffe://ocm-hub.example.org/ocm/cluster/cluster1/agent/registration
+    work          spiffe://ocm-hub.example.org/ocm/cluster/cluster1/agent/work
+  ```
+
+- Validate both templates locally with sdk-go's `idtemplate.Compile` so typos fail before
+  anything is applied.
+
+Test rows:
+
+| Command | Expected |
+| --- | --- |
+| `init ... --spiffe-agent-id-template 'spiffe://{trustDomain}/k8s/{cluster}/ns/{namespace}/ocm/{role}'` | ClusterManager has that `agentIDTemplate` |
+| `init ... --spiffe-agent-id-template 'spiffe://{trustDomain}/ocm/{clutser}/{role}'` | error naming `{clutser}`, nothing applied |
+| `join ... --registration-auth spiffe` without `--cluster-name` | error `--cluster-name is required with spiffe` |
+| `join ... --spiffe-agent-id-template <same as init>` | Klusterlet has that `agentIDTemplate` |

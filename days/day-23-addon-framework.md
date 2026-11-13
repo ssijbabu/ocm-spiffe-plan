@@ -178,3 +178,51 @@ gh pr create -R open-cluster-management-io/addon-framework --draft --head ssijba
 ## Update: multiple agent trust domains
 
 The helper takes the agent's trust domain (the cluster's pinned one), not the trust domain of `HubSPIFFEID`.
+
+## Update: agent ID templates
+
+The helper renders the add-on agent's ID from `addOnAgentIDTemplate` instead of a fixed
+`fmt.Sprintf`:
+
+```go
+type SPIFFEAgent struct {
+	ClusterName, AddOnName, AgentName string
+	Namespace                         string // the add-on's install namespace, for {namespace}
+	HubEndpoint, HubSPIFFEID          string
+	TrustDomain                       string // the agent's own; default: the trust domain of HubSPIFFEID
+	AddOnAgentIDTemplate              string // default: v1.DefaultSPIFFEAddOnAgentIDTemplate
+	WorkloadAPISocket                 string
+}
+
+func SPIFFEClientOptions(ctx context.Context, a SPIFFEAgent) (*grpcoptions.GRPCOptions, io.Closer, error) {
+	tmpl, err := idtemplate.Compile(idtemplate.KindAddOnAgent,
+		cmp.Or(a.AddOnAgentIDTemplate, v1.DefaultSPIFFEAddOnAgentIDTemplate))
+	if err != nil {
+		return nil, nil, err
+	}
+	td := cmp.Or(a.TrustDomain, spiffeid.RequireFromString(a.HubSPIFFEID).TrustDomain().Name())
+	id, err := tmpl.Render(td, map[string]string{
+		idtemplate.Cluster: a.ClusterName, idtemplate.AddOn: a.AddOnName,
+		idtemplate.Agent: a.AgentName, idtemplate.Namespace: a.Namespace,
+	})
+	if err != nil {
+		return nil, nil, err
+	}
+	return grpcoptions.NewSPIFFEGRPCOptions(ctx, grpcoptions.SPIFFEConfig{
+		URL: a.HubEndpoint, HubSPIFFEID: a.HubSPIFFEID, AgentSPIFFEID: id.String(),
+		WorkloadAPISocket: cmp.Or(a.WorkloadAPISocket, "unix:///spiffe-workload-api/spire-agent.sock"),
+	})
+}
+```
+
+The template reaches the add-on agent the same way `HubEndpoint`, `HubSPIFFEID` and the trust
+domain do. That is still open (`questions.md` Q8); whatever carries those carries the Klusterlet's
+`addOnAgentIDTemplate` too.
+
+Test rows for the helper:
+
+| Template | Values | Expected agent ID |
+| --- | --- | --- |
+| empty (default) | cluster1, my-addon, my-addon-agent | `spiffe://ocm-hub.example.org/ocm/cluster/cluster1/addon/my-addon/agent/my-addon-agent` |
+| `spiffe://{trustDomain}/k8s/{cluster}/ns/{namespace}/addon/{addon}/{agent}` | same, namespace `open-cluster-management-agent-addon` | `spiffe://ocm-hub.example.org/k8s/cluster1/ns/open-cluster-management-agent-addon/addon/my-addon/my-addon-agent` |
+| `spiffe://{trustDomain}/ocm/{cluster}/{addon}` | same | error `must contain {agent}` |

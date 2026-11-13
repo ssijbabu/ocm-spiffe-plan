@@ -1,6 +1,6 @@
 # Day 3: API, Klusterlet, Klusterlet status and add-on driver
 
-**Status:** done, except opening the upstream draft PR. api commits `a770a061` (Klusterlet, status,
+**Status:** done, except opening the upstream draft PR. "Update: agent ID templates" is coded and tested (2026-11-13), not committed yet. api commits `a770a061` (Klusterlet, status,
 add-on driver) and `c77b5174` (agent trust domain, pinning annotation), on `fork/spire`.
 
 **Goal:** the `Klusterlet` accepts `authType: spiffe`, including agents in a trust domain other than
@@ -367,3 +367,95 @@ gh pr create -R open-cluster-management-io/api --draft --head ssijbabu:spire \
 
 - [x] The Klusterlet spec has no bootstrap Secret reference for `spiffe`.
 - [x] Status holds only names, UIDs and generations; nothing secret.
+
+## Update: agent ID templates (coded, not committed)
+
+The agents must build the same IDs the hub parses, so the Klusterlet gets the same two templates
+as the ClusterManager (Day 2, "Update: agent ID templates"). The Klusterlet operator renders each
+agent's full expected ID from them (Day 18); agents never parse templates. The add-on template is
+here because add-on agents run on the managed cluster too, and get their expected ID from the
+same place as `hubEndpoint` and `hubSPIFFEID` (Day 23, `questions.md` Q8).
+
+### Task U1: add the fields
+
+**Input:** `operator/v1/types_klusterlet.go`, `KlusterletSPIFFEConfig`, after `trustDomain`.
+
+```go
+	// agentIDTemplate is the layout of this Klusterlet's agent SPIFFE IDs. It must equal the
+	// hub's ClusterManager agentIDTemplate, or the hub refuses the agents. {trustDomain} is
+	// trustDomain, {cluster} the cluster name, {role} registration, work or klusterlet, and
+	// {namespace} the namespace the agent runs in.
+	// +optional
+	// +kubebuilder:default:="spiffe://{trustDomain}/ocm/cluster/{cluster}/agent/{role}"
+	// +kubebuilder:validation:MaxLength=512
+	// +kubebuilder:validation:Pattern=`^spiffe://\{trustDomain\}(/([A-Za-z0-9._-]+|\{[A-Za-z]+\}))+$`
+	AgentIDTemplate string `json:"agentIDTemplate,omitempty"`
+
+	// addOnAgentIDTemplate is the layout of add-on agent SPIFFE IDs on this cluster. It must
+	// equal the hub's ClusterManager addOnAgentIDTemplate. {namespace} is the add-on's install
+	// namespace.
+	// +optional
+	// +kubebuilder:default:="spiffe://{trustDomain}/ocm/cluster/{cluster}/addon/{addon}/agent/{agent}"
+	// +kubebuilder:validation:MaxLength=512
+	// +kubebuilder:validation:Pattern=`^spiffe://\{trustDomain\}(/([A-Za-z0-9._-]+|\{[A-Za-z]+\}))+$`
+	AddOnAgentIDTemplate string `json:"addOnAgentIDTemplate,omitempty"`
+```
+
+CEL works on the Klusterlet (Q5), so check the required placeholders in the CRD as well, on
+`KlusterletSPIFFEConfig`:
+
+```go
+// +kubebuilder:validation:XValidation:rule="!has(self.agentIDTemplate) || (self.agentIDTemplate.contains('/{cluster}') && self.agentIDTemplate.contains('/{role}'))",message="agentIDTemplate must contain {cluster} and {role}"
+// +kubebuilder:validation:XValidation:rule="!has(self.addOnAgentIDTemplate) || (self.addOnAgentIDTemplate.contains('/{cluster}') && self.addOnAgentIDTemplate.contains('/{addon}') && self.addOnAgentIDTemplate.contains('/{agent}'))",message="addOnAgentIDTemplate must contain {cluster}, {addon} and {agent}"
+```
+
+Unknown placeholders, duplicates and overlap are checked by the Klusterlet operator with sdk-go's
+`idtemplate` package (Day 18), which sets `Degraded`.
+
+Add `GetAgentIDTemplate()` and `GetAddOnAgentIDTemplate()` on `KlusterletSPIFFEConfig`, as on the
+ClusterManager, reusing the same default constants.
+
+**`clusterName` becomes required with `spiffe`.** The operator renders each agent's ID before the
+agent runs, so it can't wait for the registration agent to generate a cluster name. The SPIRE
+entries need the literal name anyway. On `KlusterletSpec`:
+
+```go
+// +kubebuilder:validation:XValidation:rule="!has(self.registrationConfiguration) || !has(self.registrationConfiguration.registrationDriver) || !has(self.registrationConfiguration.registrationDriver.authType) || self.registrationConfiguration.registrationDriver.authType != 'spiffe' || (has(self.clusterName) && self.clusterName != '')",message="clusterName is required when registrationDriver.authType is spiffe"
+```
+
+Check the real field path from `KlusterletSpec` to `registrationDriver` before writing the rule.
+
+### Task U2: tests
+
+Add to the Klusterlet SPIFFE integration tests:
+
+| Case | `spiffe` block | Expected |
+| --- | --- | --- |
+| Defaults | `hubEndpoint`, `hubSPIFFEID` only | both templates filled with the defaults |
+| Custom with namespace | `agentIDTemplate: spiffe://{trustDomain}/k8s/{cluster}/ns/{namespace}/ocm/{role}` | accepted |
+| No `{role}` | `agentIDTemplate: spiffe://{trustDomain}/ocm/cluster/{cluster}/agent` | refused, `must contain {cluster} and {role}` |
+| No `{agent}` | `addOnAgentIDTemplate: spiffe://{trustDomain}/ocm/{cluster}/{addon}` | refused, `must contain {cluster}, {addon} and {agent}` |
+| Wrong prefix | `agentIDTemplate: spiffe://east.example.org/ocm/{cluster}/{role}` | refused, `should match` |
+| No `clusterName` | `authType: spiffe`, `clusterName` empty | refused, `clusterName is required` |
+| `clusterName` set | `authType: spiffe`, `clusterName: cluster1` | accepted |
+
+**Run, verify and commit** as in Task 7, in the same commit as Day 2's update.
+
+### Result (2026-11-13)
+
+Coded in `api`, in the working tree (not committed):
+
+- ClusterManager and Klusterlet: `agentIDTemplate`, `addOnAgentIDTemplate`, the default constants
+  and `Get...` helpers; Klusterlet CEL rules for the required placeholders.
+- Klusterlet: `clusterName` required with `spiffe`. The rule uses `size(self.clusterName) > 0`,
+  not `self.clusterName != ''`: gofmt turns `''` in a doc comment into a typographic quote, which
+  breaks the generated rule.
+- Klusterlet status: `status.spiffe.agentIDs`, a list keyed by `role` (`registration`, `work`,
+  `klusterlet`), at most 3.
+- Tests: the table cases are loops of `It` (Ginkgo v1's `extensions/table` isn't vendored).
+  `make test-api-integration`: 247 of 247 (was 223). Unit tests for the four helpers pass.
+- `make verify-gocilint` (Go 1.26): 0 issues. `make verify-scripts` passes. `verify-codegen-crds`
+  fails only because the tree is uncommitted; `make update` is idempotent.
+
+Still to do: commit, `make verify` on the clean tree, push to `fork/spire`, move the `replace`
+lines in `sdk-go` and `ocm`.

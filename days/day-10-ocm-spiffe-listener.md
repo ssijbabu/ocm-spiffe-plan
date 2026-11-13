@@ -207,3 +207,40 @@ CloudEvents services and authorizer."
 Add the flag `--spiffe-agent-trust-domains` (comma separated; default: the hub's trust domain), passed to the authenticator and server TLS.
 
 Always get the accepted trust domains from `SPIFFERegistrationConfig.GetAgentTrustDomains()` (api `1fa143c5`). It adds the hub's own trust domain whether or not the admin listed it, so never read `AgentTrustDomains` directly.
+
+## Update: agent ID templates
+
+Two more flags, defaulting to the api constants:
+
+```go
+	fs.StringVar(&o.SPIFFE.AgentIDTemplate, "spiffe-agent-id-template", v1.DefaultSPIFFEAgentIDTemplate,
+		"SPIFFE ID layout of Klusterlet agents.")
+	fs.StringVar(&o.SPIFFE.AddOnAgentIDTemplate, "spiffe-addon-agent-id-template", v1.DefaultSPIFFEAddOnAgentIDTemplate,
+		"SPIFFE ID layout of add-on agents.")
+```
+
+In `runSPIFFEListener`, build the scheme once and refuse to start on any error, before opening the
+Workload API source:
+
+```go
+	scheme, err := grpcauthn.NewIDScheme(o.SPIFFE.AgentIDTemplate, o.SPIFFE.AddOnAgentIDTemplate,
+		o.SPIFFE.AgentTrustDomains)
+	if err != nil {
+		return fmt.Errorf("SPIFFE listener: %w", err)
+	}
+	if err := scheme.CheckServerID(spiffeid.RequireFromString(serverID)); err != nil {
+		return fmt.Errorf("SPIFFE listener: %w", err)
+	}
+	...
+		WithTransportCredentials(spiffeserver.NewServerCredentials(src, scheme, o.registry)).
+		WithAuthenticator(grpcauthn.NewSPIFFEAuthenticator(scheme)).
+```
+
+Test rows:
+
+| Case | Flags | Expected |
+| --- | --- | --- |
+| Defaults | no template flags | an agent with `.../ocm/cluster/cluster1/agent/work` connects |
+| Custom template | `--spiffe-agent-id-template=spiffe://{trustDomain}/k8s/{cluster}/ns/{namespace}/ocm/{role}` | `.../k8s/cluster1/ns/open-cluster-management-agent/ocm/work` connects; `.../ocm/cluster/cluster1/agent/work` is refused |
+| Bad template | `--spiffe-agent-id-template=spiffe://{trustDomain}/{cluster}/{role}` | `Run` returns `needs at least one fixed path segment` |
+| Server ID matches a template | `--spiffe-server-id=spiffe://ocm-hub.example.org/ocm/cluster/hub/agent/work` | `Run` returns `agents could present it` |

@@ -152,3 +152,24 @@ git add test/e2e/spiffe && git commit -s -m ":seedling: kind + SPIRE environment
 ## Update: multiple agent trust domains
 
 For the multi-trust-domain case, run the spoke's SPIRE in its own trust domain (`east.example.org`) and federate it with the hub's (`ClusterFederatedTrustDomain` on both sides, `federatesWith` in the `ClusterSPIFFEID`s). Keep one same-domain spoke as well.
+
+## Update: agent ID templates
+
+Write `entries.yaml` from `plan/clusterspiffeid.md` (it has every entry, per mode). Two additions:
+
+- Every `ClusterSPIFFEID` needs `spec.className` matching the chart's controller manager
+  (`<release namespace>-<release name>`, `spire-server-spire` here); the chart ignores objects
+  without it. Check `controllerManager.className` in the 0.30.4 values.
+- Add a second set of agent entries for the custom template used on Day 27, Task 7:
+  `spiffe://{trustDomain}/k8s/{cluster}/ns/{namespace}/ocm/{role}`. Keep the cluster name and role
+  fixed in each entry; only the namespace segment may use `{{ .PodMeta.Namespace }}`, because the
+  hub never trusts it:
+
+  ```yaml
+  spiffeIDTemplate: "spiffe://ocm-hub.example.org/k8s/cluster1/ns/{{ .PodMeta.Namespace }}/ocm/work"
+  ```
+
+  Apply them only on Day 27, Task 7.
+
+Smoke test: run the `svid-check` pod once more with both sets applied. It should receive both IDs,
+which is also the input for checking that agents pick by ID.

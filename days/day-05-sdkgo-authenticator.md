@@ -10,7 +10,7 @@ request context, plus interceptors that refuse an RPC once the peer's SVID has e
 
 | Input | Where |
 | --- | --- |
-| `ParseAgentID` | Day 4, `pkg/server/grpc/authn/spiffeid.go` |
+| `IDScheme` | Day 4, `pkg/server/grpc/authn/spiffeid.go` (see "Update: agent ID templates" below) |
 | Authenticator interface | `pkg/server/grpc/authn/interface.go` |
 | How the server chains authenticators | `pkg/server/grpc/server.go`, `newAuthnUnaryInterceptor` |
 
@@ -229,3 +229,28 @@ git add -A && git commit -s -m ":sparkles: add SPIFFE authenticator and SVID exp
 ## Update: multiple agent trust domains
 
 `NewSPIFFEAuthenticator` takes the accepted trust domain set. The OCM user and groups don't change with the trust domain (cluster2 in `east.example.org` is still `system:open-cluster-management:cluster2:work`), so the pinning check on Day 11 is what stops one domain acting for another's cluster.
+
+## Update: agent ID templates
+
+The authenticator takes the `*IDScheme` from Day 4 instead of a trust domain, and no longer parses
+IDs itself:
+
+```go
+type SPIFFEAuthenticator struct {
+	scheme *IDScheme
+	now    func() time.Time
+}
+
+func NewSPIFFEAuthenticator(scheme *IDScheme) *SPIFFEAuthenticator {
+	return &SPIFFEAuthenticator{scheme: scheme, now: time.Now}
+}
+
+// in Authenticate:
+	identity, err := a.scheme.Parse(id)
+```
+
+Build the scheme in the tests with `NewIDScheme(v1.DefaultSPIFFEAgentIDTemplate,
+v1.DefaultSPIFFEAddOnAgentIDTemplate, []string{"ocm-hub.example.org"})`. Add one row with the
+namespace template from Day 4: a valid SVID for `.../k8s/cluster1/ns/team-a-ocm/ocm/work` is
+accepted as `system:open-cluster-management:cluster1:work`, and the same SVID is refused by a
+default scheme with `matches neither`.

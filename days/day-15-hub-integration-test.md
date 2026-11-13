@@ -136,3 +136,12 @@ git add -A && git commit -s -m ":white_check_mark: integration test for the SPIF
 
 - [ ] The test proves no Secret or ConfigMap with key material appears on the hub.
 - [ ] The fake agent has nothing but an SVID.
+
+## Update: agent ID templates
+
+Run the registration flow twice: once with the default templates, and once with a second gRPC
+server (another free port) started with
+`--spiffe-agent-id-template=spiffe://{trustDomain}/k8s/{cluster}/ns/{namespace}/ocm/{role}`. On
+that server, the fake agent with `spiffe://ocm-hub.example.org/k8s/cluster9/ns/team-a-ocm/ocm/registration`
+registers `cluster9`, and an agent with the default layout is refused. One flow (register, accept,
+lease update) is enough; the rest of the suite only uses the defaults.

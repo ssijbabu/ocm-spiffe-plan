@@ -122,3 +122,27 @@ git add -A && git commit -s -m ":white_check_mark: e2e for SPIFFE registration i
 ## Update: multiple agent trust domains
 
 Add rows: cluster2 in `east.example.org` joins and works; its pinned annotation is set; an SVID for cluster2 from `west.example.org` is refused; removing `east.example.org` from `agentTrustDomains` disconnects cluster2.
+
+## Update: agent ID templates
+
+### Task 7: switch to a custom template
+
+After the default-template flows pass, switch cluster1 (Default mode) to
+`spiffe://{trustDomain}/k8s/{cluster}/ns/{namespace}/ocm/{role}`:
+
+1. Apply the custom-template entries from Day 26. The agents now hold both SVIDs and keep using
+   the default one.
+2. Set `agentIDTemplate` on the ClusterManager. The hub now refuses the default IDs: the agents'
+   connections drop and their reconnects fail with `matches neither agentIDTemplate`, visible in
+   the Klusterlet's `HubConnectionDegraded` condition.
+3. Set the same `agentIDTemplate` on the Klusterlet. The operator re-renders `--spiffe-agent-id`;
+   the agents restart, pick the new SVID and reconnect.
+4. Check: the ManagedCluster stays `Available`, its ManifestWorks and add-ons are untouched, and
+   `status.spiffe.agentIDs` shows the new IDs.
+5. Delete the default-layout entries.
+
+**Expected:** connections drop between steps 2 and 3, and recover by themselves after step 3.
+Record how long the gap was. The hub accepts one template at a time, so changing it on a live hub
+interrupts every cluster until its Klusterlet matches; see `questions.md` Q7.
+
+Also run one add-on (enable, status sync) with a custom `addOnAgentIDTemplate` on both sides.

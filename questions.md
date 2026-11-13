@@ -32,3 +32,20 @@ addon-framework `main` at clone time.
       the proposal but not in `spire` (PR #203), so Days 2-3 first missed `agentTrustDomains`.
       Added to the API in api `c77b5174`, and to the affected day documents ("Update: multiple
       agent trust domains"). The proposal on `spire` still describes one trust domain.
+
+- [x] Q7 (2026-11-13, proposal OQ1): should the SPIFFE ID layout be configurable? **Yes, with
+      agent ID templates.** ClusterManager and Klusterlet get `agentIDTemplate` (default
+      `spiffe://{trustDomain}/ocm/cluster/{cluster}/agent/{role}`) and `addOnAgentIDTemplate`
+      (default `spiffe://{trustDomain}/ocm/cluster/{cluster}/addon/{addon}/agent/{agent}`).
+      Placeholders fill whole path segments; `{cluster}`, `{role}` / `{addon}`, `{agent}` are
+      required; `{namespace}` is optional and never used for authorization. The hub parses with
+      its templates (sdk-go `idtemplate`, `IDScheme`, Day 4); the Klusterlet operator renders each
+      agent's full ID into `--spiffe-agent-id` (Day 18), so `clusterName` becomes required with
+      `spiffe`. Both sides must use the same templates; the hub accepts one pair at a time, so
+      changing it on a live hub interrupts clusters until their Klusterlets match. Rejected:
+      free-form IDs passed to agents (the hub would need a per-cluster ID binding, trusted on first
+      connect). Plan: Day 4 rewritten; "Update: agent ID templates" in Days 2, 3, 5, 8, 10, 11, 14–18, 22–24, 26–28 and
+      30, and `clusterspiffeid.md`. The proposal on `spire` doesn't have this yet (Day 30).
+- [ ] Q8 (2026-11-13): how does an add-on agent learn `hubEndpoint`, `hubSPIFFEID`, its trust
+      domain and `addOnAgentIDTemplate`? None is secret. Day 23 left the first two open ("decide in
+      the PR"); the template has the same answer. Decide by Day 23.

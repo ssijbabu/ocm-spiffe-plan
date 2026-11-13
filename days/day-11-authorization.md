@@ -160,3 +160,13 @@ Add trust domain pinning (by-mode proposal, "Trust domain pinning"):
 3. No annotation: if `agentTrustDomains` has one entry, treat the cluster as pinned to it; with several, refuse until an admin sets it.
 
 Test rows: cluster2 pinned to `east.example.org`; an SVID `spiffe://west.example.org/ocm/cluster/cluster2/agent/work` is refused, and so is an agent trying to change the annotation.
+
+## Update: agent ID templates
+
+Nothing changes in the authorizer: it uses `OCMIdentity.ClusterName`, `Role`, `AddOnName` and
+`TrustDomain`, which `IDScheme.Parse` fills the same way for any template. Add one test row with
+the namespace template from Day 4 to show `Namespace` has no effect: cluster1's work agent with
+`{namespace}` = `team-a-ocm` may update cluster1's ManifestWork status, and the same agent may
+not touch cluster2's.
+
+**Rule:** never authorize on `OCMIdentity.Namespace`. The hub can't verify it.

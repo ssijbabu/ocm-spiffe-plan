@@ -158,3 +158,29 @@ git add -A && git commit -s -m ":sparkles: add the spiffe registration driver fo
 ## Update: multiple agent trust domains
 
 `Option.TrustDomain` comes from the Klusterlet's `spiffe.trustDomain` (flag `--spiffe-trust-domain`), defaulting to the trust domain of `--spiffe-hub-id`. `AgentID` uses it, so cluster2's registration agent expects `spiffe://east.example.org/ocm/cluster/cluster2/agent/registration`.
+
+## Update: agent ID templates
+
+The agent no longer builds its own ID. The Klusterlet operator renders it from the Klusterlet's
+`agentIDTemplate` (Day 18) and passes it as a flag, so the agent needs no template code and can't
+disagree with the operator.
+
+- Remove `Option.AgentID` and the agent's use of `--spiffe-trust-domain` for ID building. Add:
+
+  ```go
+  fs.StringVar(&o.AgentSPIFFEID, "spiffe-agent-id", "", "The SPIFFE ID this agent must get from the Workload API.")
+  ```
+
+- `Validate` requires `--spiffe-agent-id` with `--registration-auth=spiffe` and parses it with
+  `spiffeid.FromString`.
+- `BuildClients` passes `AgentSPIFFEID: d.opt.AgentSPIFFEID`.
+- The agent can't check that the ID matches the hub's template. If it doesn't, the hub refuses it
+  with `matches neither agentIDTemplate ...`; put that message in the `HubConnectionDegraded`
+  condition so the admin sees it on the Klusterlet.
+
+Test rows: missing `--spiffe-agent-id` fails `Validate`; a custom-layout ID
+(`spiffe://ocm-hub.example.org/k8s/cluster1/ns/open-cluster-management-agent/ocm/registration`)
+is picked from the fake Workload API exactly as a default one is.
+
+This replaces the "multiple agent trust domains" update's `AgentID`: the trust domain is now part
+of the rendered ID.
