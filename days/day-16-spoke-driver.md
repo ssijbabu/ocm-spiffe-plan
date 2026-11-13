@@ -184,3 +184,12 @@ is picked from the fake Workload API exactly as a default one is.
 
 This replaces the "multiple agent trust domains" update's `AgentID`: the trust domain is now part
 of the rendered ID.
+
+## Update: what Days 4–9 built (2026-11-13)
+
+- `grpcoptions.NewSPIFFEGRPCOptions` returns `(opts, closer, err)`; the closer is a
+  `*spiffe.X509Source`. Keep it, and use its `Ready()` in the agent's readiness check: it returns
+  `*spiffe.ErrSVIDNotFound` (expected ID and received IDs) when the Workload API has no SVID with
+  the agent's ID, also after a later update drops it.
+- The base client reconnects and resubscribes by itself after the hub closes the connection at
+  SVID expiry; the first retry is after 5–10s (`questions.md` Q9). Nothing to add in the agents.

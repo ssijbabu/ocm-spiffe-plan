@@ -147,3 +147,10 @@ git add -A && git commit -s -m ":sparkles: close SPIFFE connections on cluster d
 ## Update: multiple agent trust domains
 
 Removing a trust domain from `agentTrustDomains` closes every connection from that domain (`Registry.CloseTrustDomain`) and refuses new ones at TLS.
+
+## Update: what Days 4–9 built (2026-11-13)
+
+The sdk-go registry already has `CloseCluster(cluster)`, `CloseAddOn(cluster, addon)` and
+`CloseTrustDomain(td)` (each returns how many connections it closed), plus `Len()` and
+`PeerSerials(id)` for tests. A closed agent reconnects at once at the TLS level (Day 9 test); the
+authorizer must refuse it, so revocation needs both the close and the authorizer check.

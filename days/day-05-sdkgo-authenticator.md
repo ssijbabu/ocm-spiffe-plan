@@ -254,3 +254,13 @@ v1.DefaultSPIFFEAddOnAgentIDTemplate, []string{"ocm-hub.example.org"})`. Add one
 namespace template from Day 4: a valid SVID for `.../k8s/cluster1/ns/team-a-ocm/ocm/work` is
 accepted as `system:open-cluster-management:cluster1:work`, and the same SVID is refused by a
 default scheme with `matches neither`.
+
+## Result (2026-11-13)
+
+sdk-go `a8b06799`, pushed. **Design change:** the authenticator does not read
+`VerifiedChains`. go-spiffe verifies the peer in its own `VerifyPeerCertificate` callback, so
+with SPIFFE TLS `VerifiedChains` is always empty and the planned authenticator refused every real
+agent (found by Day 8's server test). Instead the Day 8 server credentials return an
+`authn.SPIFFEAuthInfo` (TLS info, SPIFFE ID, NotAfter) after they have verified and mapped the
+SVID, and `SPIFFEAuthenticator` accepts only that AuthInfo. A connection from any other
+credentials, even with a verified SVID chain, is refused. Tests cover that case.

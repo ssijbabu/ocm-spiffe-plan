@@ -2,7 +2,8 @@
 
 Open points found while implementing. Tick them when answered, and say where.
 
-- [ ] Q1 (proposal OQ4): which SPIRE topology for e2e? Decide by Day 26.
+- [ ] Q1 (proposal OQ4): which SPIRE topology for e2e? Decide by Day 26. Note: with one hub
+      server and agent-only spokes, spoke `ClusterSPIFFEID`s aren't reconciled (Day 26 update).
 - [ ] Q2: does envtest in ocm run Kubernetes >= 1.30? Needed for ValidatingAdmissionPolicy on Day 19.
 - [ ] Q3: exact identity of the work agent on the managed cluster in hosted mode, for the add-on
       admission policy (Day 20).
@@ -49,3 +50,32 @@ addon-framework `main` at clone time.
 - [ ] Q8 (2026-11-13): how does an add-on agent learn `hubEndpoint`, `hubSPIFFEID`, its trust
       domain and `addOnAgentIDTemplate`? None is secret. Day 23 left the first two open ("decide in
       the PR"); the template has the same answer. Decide by Day 23.
+- [x] Q9 (Day 9, 2026-11-13): how does the CloudEvents gRPC client reconnect? The base client
+      (`generic/clients/baseclient.go`) reconnects by itself when the transport reports an error:
+      the subscribe stream fails, or the connection goes `Idle` or `TransientFailure` (the v2
+      transport's `monitorConnectionState`). It closes the transport, waits `DelayFn`
+      (`wait.Backoff{Duration: 5s, Factor: 5, Jitter: 1.0, Cap: 1m}`, reset after 10 minutes
+      without backoff, so the first retry is after 5–10s), connects (a new `grpc.ClientConn`, so
+      a new TLS handshake with the current SVID), subscribes again and resyncs. No change needed
+      in sdk-go. An agent therefore misses events for 5–10s after each SVID expiry; with a 1h TTL
+      that's once an hour per agent.
+- [ ] Q10 (Day 7/8, 2026-11-13): the plan's go-spiffe v2.6.0 has a data race in
+      `X509Source.GetX509BundleForTrustDomain`; sdk-go uses v2.9.0, which moves sdk-go's grpc from
+      1.76.0 to 1.79.3. Mention it in the sdk-go PR.
+
+## Lessons from implementation (2026-11-13)
+
+- **gofmt rewrites quotes in doc comments.** `''` in a `+kubebuilder:validation:XValidation`
+  marker becomes `”`, which breaks the generated CEL rule. Avoid empty-string literals in markers
+  (use `size(x) > 0`), and grep the CRDs after `make update`.
+- **The SPIRE Helm chart ignores `ClusterSPIFFEID`s without `spec.className`**
+  (`watchClassless: false`; class `<namespace>-<release>`, `spire-server-spire` on ocm-hub).
+- **Test TLS through a real handshake.** go-spiffe verifies peers in `VerifyPeerCertificate`, so
+  `VerifiedChains` is empty; a unit test that builds a TLS context by hand hid that the planned
+  authenticator refused every agent.
+- **Run SPIFFE tests with `-race`.** It caught go-spiffe v2.6.0's bundle race.
+- **api has Ginkgo v1 without `extensions/table`.** Write table cases as loops of `It`.
+- **`grpcoptions.NewGRPCOptions()` leaves `Dialer` nil.** Build the `GRPCDialer` yourself.
+- **CloudEvents test events need the `contenttype` attribute and data**, or the receiver drops them
+  as `unknown Message encoding`.
+

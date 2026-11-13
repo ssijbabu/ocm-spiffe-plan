@@ -230,3 +230,10 @@ git add -A && git commit -s -m ":seedling: add a fake SPIRE Workload API for tes
 ## Rules check
 
 - [ ] Test-only: the package is under `pkg/testing` and no production code imports it.
+
+## Result (2026-11-13)
+
+sdk-go `3ed6eb13`, pushed. go-spiffe's `X509Source` only calls `FetchX509SVID`, so
+`FetchX509Bundles` isn't implemented. Added `Server.Federate(cas...)` (federated bundles in the
+response, keyed `spiffe://<td>`) and `Server.Stop()`. The socket lives in a short
+`os.MkdirTemp` directory: unix socket paths are limited to about 100 bytes.

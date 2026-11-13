@@ -173,3 +173,12 @@ Write `entries.yaml` from `plan/clusterspiffeid.md` (it has every entry, per mod
 
 Smoke test: run the `svid-check` pod once more with both sets applied. It should receive both IDs,
 which is also the input for checking that agents pick by ID.
+
+## Update: topology and ClusterSPIFFEID (2026-11-13)
+
+With one SPIRE server on the hub and only SPIRE agents on the spoke (Task 1's recommendation), the
+spoke has no SPIRE controller manager, and the hub's controller manager only sees hub pods. So the
+spoke's `ClusterSPIFFEID`s in Task 3 would never be reconciled. Either create the spoke's entries
+with `spire-server entry create` on the hub server (parented to the spoke's agents, selectors
+`k8s:ns`, `k8s:sa`, `k8s:pod-label`), or run a SPIRE server per cluster (nested or federated).
+See `plan/clusterspiffeid.md`, "Topology". Decide with Q1.

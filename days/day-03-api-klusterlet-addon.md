@@ -1,6 +1,6 @@
 # Day 3: API, Klusterlet, Klusterlet status and add-on driver
 
-**Status:** done, except opening the upstream draft PR. "Update: agent ID templates" is coded and tested (2026-11-13), not committed yet. api commits `a770a061` (Klusterlet, status,
+**Status:** done, except opening the upstream draft PR. "Update: agent ID templates" is api `b805cf6c` (2026-11-13), pushed to `fork/spire`. api commits `a770a061` (Klusterlet, status,
 add-on driver) and `c77b5174` (agent trust domain, pinning annotation), on `fork/spire`.
 
 **Goal:** the `Klusterlet` accepts `authType: spiffe`, including agents in a trust domain other than
@@ -368,7 +368,7 @@ gh pr create -R open-cluster-management-io/api --draft --head ssijbabu:spire \
 - [x] The Klusterlet spec has no bootstrap Secret reference for `spiffe`.
 - [x] Status holds only names, UIDs and generations; nothing secret.
 
-## Update: agent ID templates (coded, not committed)
+## Update: agent ID templates (done: api `b805cf6c`)
 
 The agents must build the same IDs the hub parses, so the Klusterlet gets the same two templates
 as the ClusterManager (Day 2, "Update: agent ID templates"). The Klusterlet operator renders each
@@ -443,7 +443,7 @@ Add to the Klusterlet SPIFFE integration tests:
 
 ### Result (2026-11-13)
 
-Coded in `api`, in the working tree (not committed):
+Committed as api `b805cf6c` (with Day 2's update) and pushed to `fork/spire`:
 
 - ClusterManager and Klusterlet: `agentIDTemplate`, `addOnAgentIDTemplate`, the default constants
   and `Get...` helpers; Klusterlet CEL rules for the required placeholders.
@@ -454,8 +454,7 @@ Coded in `api`, in the working tree (not committed):
   `klusterlet`), at most 3.
 - Tests: the table cases are loops of `It` (Ginkgo v1's `extensions/table` isn't vendored).
   `make test-api-integration`: 247 of 247 (was 223). Unit tests for the four helpers pass.
-- `make verify-gocilint` (Go 1.26): 0 issues. `make verify-scripts` passes. `verify-codegen-crds`
-  fails only because the tree is uncommitted; `make update` is idempotent.
-
-Still to do: commit, `make verify` on the clean tree, push to `fork/spire`, move the `replace`
-lines in `sdk-go` and `ocm`.
+- `make verify` on the committed tree (Go 1.26): 0 issues. (Before committing,
+  `verify-codegen-crds` fails only because it ends with `git diff --exit-code`.)
+- `sdk-go` points at it (`replace ... => github.com/ssijbabu/api v1.3.1-0.20261113090800-b805cf6c07e4`).
+  `ocm` moves to it on Day 10.

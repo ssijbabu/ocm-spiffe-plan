@@ -1,6 +1,6 @@
 # Day 2: API, ClusterManager driver and feature gate
 
-**Status:** done. "Update: agent ID templates" is coded and tested (2026-11-13), not committed yet. api commits `aaceeb2d` (driver and feature gate), `c77b5174` (agent trust
+**Status:** done. "Update: agent ID templates" is api `b805cf6c` (2026-11-13), pushed to `fork/spire`. api commits `aaceeb2d` (driver and feature gate), `c77b5174` (agent trust
 domains), `4d9027ee` (comments), `1fa143c5` (hub's trust domain always accepted, full rule
 coverage), `dddccc02` (helper test), on `fork/spire`.
 
@@ -462,7 +462,7 @@ stays empty (the operator computes it). With `agentTrustDomains` left out, only
 - [x] No field holds a key, certificate or token.
 - [x] Everything is behind `SPIFFERegistration`.
 
-## Update: agent ID templates (coded, not committed)
+## Update: agent ID templates (done: api `b805cf6c`)
 
 **Decision (2026-11-13):** the SPIFFE ID layout of agents is configurable with two templates, one
 for Klusterlet agents and one for add-on agents. This answers the proposal's Open Question 1;

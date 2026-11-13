@@ -134,24 +134,24 @@ yet.
 - [x] Run `make update` and `make verify` (lint with `DGO_IMAGE=golang:1.26`).
 - [x] Add `agentIDTemplate` and `addOnAgentIDTemplate` to the Klusterlet's `spiffe` block, with
       CEL checks for the required placeholders; add `status.spiffe.agentIDs`; require
-      `clusterName` with `spiffe`. Coded and tested (247 of 247); not committed yet.
+      `clusterName` with `spiffe`. Done: api `b805cf6c` (247 of 247), pushed.
 
 **Done when:** API integration tests pass (202 of 202), the commit is pushed to the fork, and the
 `api` PR is opened as a draft.
 
 ### Day 4: SPIFFE ID templates and mapping (`sdk-go`, `pkg/spiffe/idtemplate`, `pkg/server/grpc/authn`)
 
-- [ ] Add `github.com/spiffe/go-spiffe/v2` to `go.mod`.
-- [ ] Add `pkg/spiffe/idtemplate`: `Compile` (prefix `spiffe://{trustDomain}/`, known and
+- [x] Add `github.com/spiffe/go-spiffe/v2` to `go.mod`.
+- [x] Add `pkg/spiffe/idtemplate`: `Compile` (prefix `spiffe://{trustDomain}/`, known and
       required placeholders, whole segments, each once, at least one fixed segment), `Render`,
       `Match` and `Overlaps`.
-- [ ] Add `IDScheme` (agent template, add-on template, `agentTrustDomains`) with `Parse`, which maps
+- [x] Add `IDScheme` (agent template, add-on template, `agentTrustDomains`) with `Parse`, which maps
       an ID to the user and groups in the proposal's ID-scheme table, plus `system:authenticated`,
       and returns the SVID's trust domain (pinning, Day 11). `{namespace}` is checked and returned
       for logs only.
-- [ ] Add `CheckServerID`: the hub's ID must match neither template.
-- [ ] Reject IDs from a trust domain not in `agentTrustDomains`, and IDs that match neither template.
-- [ ] Write table tests for the templates, and for `Parse` with the default and a custom template.
+- [x] Add `CheckServerID`: the hub's ID must match neither template.
+- [x] Reject IDs from a trust domain not in `agentTrustDomains`, and IDs that match neither template.
+- [x] Write table tests for the templates, and for `Parse` with the default and a custom template.
 
 **Done when:** with the default templates the tests cover every row of the proposal's mapping
 table; an ID from `east.example.org` is accepted when listed; an unlisted trust domain, a path like
@@ -160,11 +160,11 @@ table; an ID from `east.example.org` is accepted when listed; an unlisted trust 
 
 ### Day 5: SPIFFE authenticator (`sdk-go`, `pkg/server/grpc/authn`)
 
-- [ ] Add `SPIFFEAuthenticator`, next to `mtls.go` and `token.go`. It reads the verified peer
+- [x] Add `SPIFFEAuthenticator`, next to `mtls.go` and `token.go`. It reads the verified peer
       SVID from the TLS state, maps it with the `IDScheme` from Day 4, and puts the user, groups, SPIFFE ID and SVID expiry into
       the request context.
-- [ ] Add unit and stream interceptors that reject an RPC whose peer SVID has already expired.
-- [ ] Write unit tests: a valid SVID, an expired SVID, a missing peer certificate, and a
+- [x] Add unit and stream interceptors that reject an RPC whose peer SVID has already expired.
+- [x] Write unit tests: a valid SVID, an expired SVID, a missing peer certificate, and a
       certificate without a SPIFFE URI.
 
 **Done when:** the authenticator and its interceptors are tested, and `go vet` passes.
@@ -173,23 +173,23 @@ table; an ID from `east.example.org` is accepted when listed; an unlisted trust 
 
 ### Day 6: fake Workload API for tests (`sdk-go`)
 
-- [ ] Write a small in-process Workload API server for tests. It implements the gRPC service from
+- [x] Write a small in-process Workload API server for tests. It implements the gRPC service from
       `github.com/spiffe/go-spiffe/v2/proto/spiffe/workload` on a unix socket.
-- [ ] Have it issue X.509-SVIDs from a test CA with a TTL you choose, and rotate them on demand.
-- [ ] Have it return several SVIDs at once, to test SVID picking.
-- [ ] Put it in a test helper package that `ocm` can import later.
+- [x] Have it issue X.509-SVIDs from a test CA with a TTL you choose, and rotate them on demand.
+- [x] Have it return several SVIDs at once, to test SVID picking.
+- [x] Put it in a test helper package that `ocm` can import later.
 
 **Done when:** a test can start the fake server, get an SVID with `workloadapi.X509Source`, rotate
 it, and see the new one.
 
 ### Day 7: SVID picking and client TLS (`sdk-go`)
 
-- [ ] Add an SVID picker that uses `workloadapi.WithDefaultX509SVIDPicker` and picks by the
+- [x] Add an SVID picker that uses `workloadapi.WithDefaultX509SVIDPicker` and picks by the
       expected SPIFFE ID, never by position. If that ID is missing, it reports not ready and lists
       the IDs it did receive.
-- [ ] Add a client option in `pkg/cloudevents/generic/options/grpc` that dials with the agent's SVID:
+- [x] Add a client option in `pkg/cloudevents/generic/options/grpc` that dials with the agent's SVID:
       `tlsconfig.MTLSClientConfig(source, source, tlsconfig.AuthorizeID(hubSPIFFEID))`.
-- [ ] Test the following:
+- [x] Test the following:
   - the picker picks the right SVID when there are two;
   - the client refuses a server with another ID in the same trust domain;
   - the client picks up a rotated SVID.
@@ -198,29 +198,29 @@ it, and see the new one.
 
 ### Day 8: server TLS and connection registry (`sdk-go`, `pkg/server/grpc`)
 
-- [ ] Add server TLS from `tlsconfig.MTLSServerConfig`, with an authorizer that accepts any trust
+- [x] Add server TLS from `tlsconfig.MTLSServerConfig`, with an authorizer that accepts any trust
       domain in `agentTrustDomains` (`authorizeMemberOfAny`, from `IDScheme.TrustDomains()`), not
       just the hub's. The credentials wrapper maps peers with `IDScheme.Parse`.
-- [ ] Have the registry also close every connection of one trust domain (`CloseTrustDomain`).
-- [ ] Add a `TransportCredentials` wrapper. After each handshake it records the peer's SPIFFE ID
+- [x] Have the registry also close every connection of one trust domain (`CloseTrustDomain`).
+- [x] Add a `TransportCredentials` wrapper. After each handshake it records the peer's SPIFFE ID
       and SVID expiry, and registers the `net.Conn` in a connection registry.
-- [ ] Have the registry arm a timer that closes the `net.Conn` when the SVID expires.
-- [ ] Have the registry close connections by cluster, and by cluster plus add-on.
+- [x] Have the registry arm a timer that closes the `net.Conn` when the SVID expires.
+- [x] Have the registry close connections by cluster, and by cluster plus add-on.
 
 **Done when:** a test proves the 10:40 / 11:00 example with a short TTL. The connection is closed
 at expiry, and no further unary or stream RPC succeeds on it.
 
 ### Day 9: reconnect and renewal (`sdk-go`)
 
-- [ ] Make sure the client reconnects after the server closes the connection, using its current,
+- [x] Make sure the client reconnects after the server closes the connection, using its current,
       rotated SVID.
-- [ ] Test this flow: connect, the SVID rotates, the old SVID expires, the server closes, the
+- [x] Test this flow: connect, the SVID rotates, the old SVID expires, the server closes, the
       client reconnects with the new SVID, and a stream resumes.
-- [ ] Test that the registry closes connections on demand (deny or delete), and that an RPC already
+- [x] Test that the registry closes connections on demand (deny or delete), and that an RPC already
       running on that connection fails.
 
 **Done when:** the renewal flow works end to end against the fake Workload API. Push the change
-and open the `sdk-go` PR as a draft.
+and open the `sdk-go` PR as a draft. (Days 4–9 are sdk-go `3c59da31`..`7541964e`, pushed to `fork/spire` 2026-11-13; draft PR not opened yet.)
 
 ### Day 10: SPIFFE listener in the gRPC server (`ocm`, `pkg/server/grpc`)
 

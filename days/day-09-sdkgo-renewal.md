@@ -122,3 +122,18 @@ git rev-parse HEAD
 
 - [ ] Renewal needs no OCM action: SPIRE rotates, the connection is replaced.
 - [ ] No step writes the SVID anywhere.
+
+## Result (2026-11-13)
+
+Tasks 1–4 done: sdk-go `7541964e`, pushed to `fork/spire` with Days 4–8. Task 5: pushed, but the draft PR is not opened yet.
+
+- Task 1: see `questions.md` Q9.
+- Tasks 2–3: `pkg/cloudevents/generic/options/v2/grpc/spiffe_renewal_test.go` (the v2 transport is
+  what agents use). The test drives the transport the way the base client does (close, wait,
+  connect, subscribe, receive), with a 100ms delay instead of `DelayFn`. Renewal, revocation while
+  streaming and a running unary call ending with `Unavailable` all pass with `-race`.
+- Task 4: `make test-unit`: 56 packages ok, 0 failures (baseline 52; the 4 new packages are
+  `pkg/spiffe`, `pkg/spiffe/idtemplate`, `pkg/server/grpc/spiffe`, `pkg/testing/fakespire`).
+  `make verify` (Go 1.26, golangci-lint v2.12.2): 0 issues. Same result at the pushed HEAD, after
+  switching `api` to the fork commit.
+- sdk-go head for `ocm`'s `replace` (Day 10): `7541964e`.

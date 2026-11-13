@@ -244,3 +244,18 @@ Test rows:
 | Custom template | `--spiffe-agent-id-template=spiffe://{trustDomain}/k8s/{cluster}/ns/{namespace}/ocm/{role}` | `.../k8s/cluster1/ns/open-cluster-management-agent/ocm/work` connects; `.../ocm/cluster/cluster1/agent/work` is refused |
 | Bad template | `--spiffe-agent-id-template=spiffe://{trustDomain}/{cluster}/{role}` | `Run` returns `needs at least one fixed path segment` |
 | Server ID matches a template | `--spiffe-server-id=spiffe://ocm-hub.example.org/ocm/cluster/hub/agent/work` | `Run` returns `agents could present it` |
+
+## Update: what Days 4–9 built (2026-11-13)
+
+- **Task 1 SHAs:** api `b805cf6c`, sdk-go `7541964e`. ocm is on grpc 1.84.0, so sdk-go's move to
+  grpc 1.79.3 (go-spiffe v2.9.0, `questions.md` Q10) changes nothing there.
+- **Signatures:** `spiffe.NewX509Source(ctx, addr, want)` returns `*spiffe.X509Source` (with
+  `Ready()` for the readiness check); `spiffeserver.NewServerCredentials(src, scheme, reg)` takes
+  the `*authn.IDScheme`; `authn.NewSPIFFEAuthenticator(scheme)`.
+- **Always pair** `NewServerCredentials` with `NewSPIFFEAuthenticator`: the authenticator accepts
+  only the `authn.SPIFFEAuthInfo` those credentials produce (Day 5 result). Any other credentials
+  make every request `Unauthenticated`.
+- With `WithTransportCredentials`, the server's TLS version and cipher options don't apply; the
+  SPIFFE credentials own the TLS config.
+- Use `server_spiffe_test.go` in sdk-go as the model for the listener test: it runs the server
+  builder end to end with `fakespire`.

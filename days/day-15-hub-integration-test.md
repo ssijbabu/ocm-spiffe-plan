@@ -145,3 +145,9 @@ server (another free port) started with
 that server, the fake agent with `spiffe://ocm-hub.example.org/k8s/cluster9/ns/team-a-ocm/ocm/registration`
 registers `cluster9`, and an agent with the default layout is refused. One flow (register, accept,
 lease update) is enough; the rest of the suite only uses the defaults.
+
+## Update: what Days 4–9 built (2026-11-13)
+
+`fakespire` has `NewCA`, `CA.Issue`, `CA.Bundle`, `Start`, `Server.SetSVIDs`, `Server.Federate`
+(for a second trust domain) and `Server.Stop`. Unix socket paths are limited to about 100 bytes, so
+`Start` uses a short temp directory, not `t.TempDir()`.

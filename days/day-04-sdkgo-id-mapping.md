@@ -553,3 +553,16 @@ that matches neither template."
       `system:authenticated`.
 - [ ] The hub's own ID can't be used as a client identity, with any accepted templates.
 - [ ] `{namespace}` never changes the user or groups.
+
+## Result (2026-11-13)
+
+sdk-go `3c59da31`, pushed to `fork/spire`. `pkg/spiffe/idtemplate` and
+`pkg/server/grpc/authn/spiffeid.go` as above, with the tests from Task 4 plus a few more rows
+(dot segments, a value with a slash, `{trustDomain}` in the path).
+
+- go-spiffe is **v2.9.0**, not v2.6.0: v2.6.0's `X509Source.GetX509BundleForTrustDomain` reads the
+  bundles without the source's lock, which `-race` caught on Day 7. v2.9.0 needs grpc 1.79.3
+  (sdk-go was on 1.76.0); ocm and clusteradm are already on grpc 1.84.0.
+- `api` is replaced with the fork commit:
+  `replace open-cluster-management.io/api => github.com/ssijbabu/api v1.3.1-0.20261113090800-b805cf6c07e4`.
+- Each of the six sdk-go commits (Days 4–9) builds and passes `go vet` on its own.

@@ -215,3 +215,19 @@ Server TLS uses `tlsconfig.MTLSServerConfig(src, src, authorizeMemberOfAny(agent
 `c.scheme.Parse(sid)`. Build the server TLS authorizer from `scheme.TrustDomains()`, so the list of
 trust domains has one source. The registry keys connections by `OCMIdentity.ClusterName` and
 `AddOnName` as before; `Namespace` is never a key.
+
+## Result (2026-11-13)
+
+sdk-go `0ece0894`, pushed; tested with `-race`.
+
+- `server.go`: `WithTransportCredentials` and `WithInterceptors`; the certificate-file TLS setup
+  moved unchanged into `certFileCredentials`. A new test runs `Run` with SPIFFE credentials, the
+  SPIFFE authenticator and the expiry interceptors.
+- `NewServerCredentials(src, scheme, reg)` takes the Day 4 `IDScheme`; the TLS authorizer accepts
+  only `scheme.TrustDomains()`, even when the hub's SPIRE federates with more. It returns
+  `authn.SPIFFEAuthInfo` (see Day 5).
+- Registry: `CloseCluster`, `CloseAddOn`, `CloseTrustDomain`, `Len`, `PeerSerials`. The timer
+  field is guarded by the registry lock (an already expired SVID can fire before it is stored).
+- "Next unary call fails with Unavailable" after expiry isn't testable as written: gRPC reconnects
+  at once with a new handshake. The test checks that the open stream ends and the reconnect is a
+  new handshake (a second timer).

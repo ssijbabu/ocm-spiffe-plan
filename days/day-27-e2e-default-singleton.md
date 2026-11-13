@@ -146,3 +146,9 @@ Record how long the gap was. The hub accepts one template at a time, so changing
 interrupts every cluster until its Klusterlet matches; see `questions.md` Q7.
 
 Also run one add-on (enable, status sync) with a custom `addOnAgentIDTemplate` on both sides.
+
+## Update: what Days 4–9 built (2026-11-13)
+
+Expect a 5–10s gap in event delivery after each SVID expiry (the base client's first reconnect
+delay, `questions.md` Q9). "SVID rotation under load" should check that nothing is lost after
+the gap (the resync covers it), not that there is no gap.

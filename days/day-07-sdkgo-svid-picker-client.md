@@ -174,3 +174,15 @@ git add -A && git commit -s -m ":sparkles: pick SVIDs by ID and dial the hub wit
 ## Update: multiple agent trust domains
 
 The agent's own ID is built in the Klusterlet's `trustDomain`, while `hubSPIFFEID` stays in the hub's domain. The client's bundle source must hold the hub's trust bundle too: with federation, the SPIRE agent delivers federated bundles over the Workload API (`X509Source` serves them). Add a test with two CAs: agent in `east.example.org`, hub in `ocm-hub.example.org`.
+
+## Result (2026-11-13)
+
+sdk-go `70c882fc`, pushed.
+
+- `spiffe.NewX509Source` returns a wrapper (`*spiffe.X509Source`), not `*workloadapi.X509Source`:
+  with a nil pick, go-spiffe returns a generic "missing X509-SVID". The wrapper returns
+  `*ErrSVIDNotFound` with the expected and received IDs, also when a later update drops the ID,
+  and has `Ready()` for readiness checks.
+- `NewGRPCOptions()` leaves `Dialer` nil, so `NewSPIFFEGRPCOptions` builds the `GRPCDialer`
+  itself (keepalive off, as the YAML path defaults). It's in a new file, `spiffeoptions.go`.
+- Federation test (agent in `east.example.org`, hub in `ocm-hub.example.org`) included.
