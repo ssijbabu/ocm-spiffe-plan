@@ -79,7 +79,7 @@ addon-framework `main` at clone time.
       driver (no CSR), and the spoke reports `CustomSignerNotSupported`. A custom `kubeClient`
       subject gets `SubjectNotSupportedBySPIFFE` on the hub. Document both in the proposal.
 
-## Progress (Days 10-23, 2026-11-13)
+## Progress (Days 10-25, 2026-11-13)
 
 All local commits, nothing pushed. ocm and addon-framework `replace` sdk-go (and ocm also
 addon-framework) with `../`; switch to pushed fork commits before PRs. sdk-go `5b1570dc` isn't pushed.
@@ -99,8 +99,34 @@ addon-framework) with `../`; switch to pushed fork commits before PRs. sdk-go `5
 | 23 | addon-framework | `f4cb7a00`, `c3b39dba` | `WithSPIFFE`, subject check, `spiffeclient` |
 | 23 | ocm | `5a0f42c72`, `544c5e266` | vendor framework; `klusterlet-name` cluster annotation |
 
+| 24 | clusteradm | `75cac934`, `19d99e07` | init/join/accept; no token or bootstrap Secret with spiffe |
+| 25 | ocm | (this commit) | migration: agent deletes old hub Secrets, operator downgrade cleanup |
+
 Tests: ocm registration integration 105/105 earlier, SPIFFE specs pass; add-on integration
 29/29; operator, registration, addon, common unit tests pass; addon-framework `./pkg/...` passes.
+
+- [ ] Q14 (Day 24): with `--spiffe-endpoint-type loadBalancer`, `clusteradm init` reads the address from
+      the `cluster-manager-grpc-server-spiffe` Service, but all SPIRE and OCM Services are
+      ClusterIP on ocm-hub today (CLAUDE.md), so `init` prints a placeholder until an internal load
+      balancer exists. Decide with the AKS work (Day 29).
+- [ ] Q15 (Day 24): Hosted `join` still renders the `external-managed-kubeconfig` Secret: the
+      admin's kubeconfig for the managed cluster, used by agents on the management cluster. It
+      is not a hub credential and every driver needs it, but CLAUDE.md says OCM must not handle
+      long-lived secrets. Confirm that the managed-cluster access in Hosted modes is out of scope,
+      and say so in the proposal (Day 30).
+- [x] Q16 (Day 25): who deletes the old hub Secrets after a switch to spiffe, and when? **The
+      registration agent**, not the operator: only it can tell that the switch worked. Once its
+      SVID-based hub informer shows its cluster accepted, it deletes `hub-kubeconfig-secret` and
+      `bootstrap-hub-kubeconfig` in its namespace; the add-on registration deletes
+      `<addon>-hub-kubeconfig` when it writes `<addon>-spiffe`. Until then an admin can switch back.
+      The operator handles the downgrade: it deletes its policies and bindings (the shared
+      namespace label policy only when no other Klusterlet uses spiffe), unlabels the add-on
+      namespaces and clears `status.spiffe`.
+- [ ] Q17 (Day 25): the plan's migration tests used `grpc`; the integration spec migrates from
+      `csr` instead, on the suite's csr+spiffe hub. On the spoke the two are the same (both keep
+      `hub-kubeconfig-secret` written via a CSR), and the grpc integration hub uses a mock
+      authorizer that allows everything, so it can't show cross-cluster refusal. Migration from
+      `grpc` itself goes to the e2e days (26-28).
 
 ## Lessons from implementation (2026-11-13)
 
@@ -132,3 +158,10 @@ Tests: ocm registration integration 105/105 earlier, SPIFFE specs pass; add-on i
 - **envtest assets**: `api/_output/tools/bin/k8s/1.35.0-linux-amd64`; `ensure-envtest.sh` prints
   nothing when run from outside sdk-go.
 - **The SAR for add-on events has no resource name**, so test Roles can't use `resourceNames`.
+- **In migration tests, clear the agent's hub kubeconfig directory between agents.** A real pod
+  mounts the Secret, so it starts empty once the Secret is gone; in a test the old files stay on
+  disk and the agent skips bootstrap.
+- **The integration test containers don't mount the scratchpad.** Write test logs under the repo's
+  `_output/` (git-ignored).
+- **clusteradm's `make check` needs `git config --global --add safe.directory '*'` in the dgo
+  container**, or `git ls-files` returns nothing and the check passes vacuously.

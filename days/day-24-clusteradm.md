@@ -193,3 +193,19 @@ Test rows:
 | `init ... --spiffe-agent-id-template 'spiffe://{trustDomain}/ocm/{clutser}/{role}'` | error naming `{clutser}`, nothing applied |
 | `join ... --registration-auth spiffe` without `--cluster-name` | error `--cluster-name is required with spiffe` |
 | `join ... --spiffe-agent-id-template <same as init>` | Klusterlet has that `agentIDTemplate` |
+
+## Status (2026-11-13)
+
+Done, committed locally. See "Progress" in `questions.md` and Q14-Q17.
+
+Differences from the tasks above:
+- Task 1: clusteradm uses `replace` lines to `../ocm`, `../sdk-go`, `../addon-framework` and the
+  api fork, like the other repos; no ocm fork commit exists yet.
+- `init` checks the settings with sdk-go's `authn.NewIDScheme` (same check as the operator's
+  `SPIFFEServerID`); importing ocm's operator helpers would vendor the whole operator.
+- `init --output json` refuses a spiffe-only hub: the JSON has a token field and spiffe has none.
+- `join` with spiffe always sets the add-on driver to spiffe and refuses
+  `--addon-kubeclient-registration-auth csr|token` (the agent factory requires both to match).
+- `join` skips `waitUntilManagedClusterIsCreated` with spiffe (it needs a hub token); with `--wait`
+  it waits for `SPIFFEAdmissionReady` and prints `status.spiffe.agentIDs`.
+- No draft PR (Task 6): nothing is pushed.

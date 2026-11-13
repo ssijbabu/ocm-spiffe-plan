@@ -91,3 +91,7 @@ git push origin spire
 ## Rules check
 
 - [ ] After migration, no Secret with hub credentials is left on the spoke.
+
+## Status (2026-11-13)
+
+Done, committed locally. See "Progress" in `questions.md` and Q14-Q17.
