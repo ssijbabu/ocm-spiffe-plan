@@ -292,8 +292,9 @@ code and tests are.
 
 **What they do**
 
-1. The platform team has SPIRE on the hub and creates a SPIRE entry for the gRPC server pod with
-   the ID `spiffe://<trustDomain>/ocm/hub/grpc-server`.
+1. The platform team runs a SPIRE server outside the clusters and a SPIRE agent with the SPIFFE
+   CSI driver on the hub. It creates a SPIRE entry for the gRPC server pod with the ID
+   `spiffe://<trustDomain>/ocm/hub/grpc-server`.
 2. The admin turns the feature gate on and adds a `spiffe` driver to the `ClusterManager`
    ([5.2](#52-on-the-hub-clustermanager)), or runs `clusteradm init`
    ([6.15](#615-do-it-all-with-clusteradm)).
@@ -415,39 +416,96 @@ integration: "the registration agent joins with its SVID only"
 
 **Who:** the hub admin.
 
+![The hub admin accepts a cluster](accept.svg)
+
 **What they do:** set `hubAcceptsClient: true` on the `ManagedCluster`, or run
-`clusteradm accept`. There is no certificate request to approve.
+`clusteradm accept --clusters <name>`. That is all. There is no certificate request to approve
+and no token to hand out, because the agents already have their SVIDs.
 
-**What happens:** the hub's controllers give the cluster its permissions, as with the other
-drivers. The work agent and add-on agents can now act; before acceptance the gate refuses them.
+**What happens**
 
-**Pinning.** Every SPIFFE cluster is pinned to one trust domain with the annotation
-`open-cluster-management.io/spiffe-trust-domain`:
+1. *Before acceptance.* The cluster already exists: the registration agent created it when it
+   joined ([6.2](#62-join-a-cluster)). The registration agent may read its own `ManagedCluster`
+   to see when it is accepted. The work agent and the add-on agents are refused at the cluster
+   gate with `cluster <name> is not accepted by the hub`.
+2. *Acceptance.* The hub's controllers give the cluster its permissions, the same as with the
+   other drivers: the cluster namespace and the RoleBindings for its agents and add-ons.
+3. *After acceptance.* The registration agent sees `hubAcceptsClient: true`, marks the cluster
+   joined and starts updating its lease. The work agent and the add-on agents connect again,
+   and this time the gate lets them through to the SVID check and RBAC.
 
-- The hub sets it when the agent creates the cluster. It uses the trust domain of the SVID and
-  ignores whatever the agent sent.
-- The agent can't change it later. Only a hub user with update access can.
-- From then on, an SVID for this cluster from any other trust domain is refused.
-- A cluster with no pin (for example one that joined with another driver) is treated as pinned
-  when the hub accepts only one trust domain. With several, an admin must set the annotation.
+On every request after this, the gate also checks the cluster's *pin*: the trust domain of the
+SVID must be the trust domain the cluster is pinned to.
 
-**Why:** the hub can trust several SPIREs. Without the pin, the admin of one of them could issue
-an SVID with the name of a cluster that belongs to another, and take that cluster over.
+**The pin**
 
-**Code:** [`pinTrustDomain`](../../ocm/pkg/server/services/cluster/cluster.go#L185) (set and keep),
-[`clusterGate.check`](../../ocm/pkg/server/grpc/spiffe_gate.go#L61) (enforce),
-[`spiffeAcceptance`](../../clusteradm/pkg/cmd/accept/spiffe.go#L18) (clusteradm).
+The pin is the annotation `open-cluster-management.io/spiffe-trust-domain` on the
+`ManagedCluster`. Its value is a trust domain, for example `ocm-hub.example.org`.
+
+| Question | Answer |
+| --- | --- |
+| Who sets it? | The hub, when the registration agent creates the cluster. It uses the trust domain of the agent's SVID and ignores any value the agent sent. |
+| Can the agent change it? | No. The hub keeps the old value on every update from an agent. Only a hub user with update access to the `ManagedCluster` can change it. |
+| What does it block? | An SVID for this cluster from any other trust domain. The gate refuses it, before and after acceptance. |
+| What if a cluster has no pin? | For example, a cluster that joined with another driver and moved to `spiffe`. If the hub accepts only one trust domain, the cluster counts as pinned to it. If the hub accepts several, the agents are refused until an admin sets the annotation. |
+| What does `clusteradm accept --spiffe-trust-domain` do? | It refuses to accept a cluster pinned to a different trust domain, and pins a cluster that has no pin. |
+
+**Why**
+
+- *Why the gate refuses the work and add-on agents before acceptance.* RBAC alone isn't enough:
+  when a cluster is denied, the hub keeps the cluster's RoleBindings, so a denied cluster's
+  agents would still pass RBAC. The registration agent is not refused, because it has to see
+  when the cluster is accepted again.
+- *Why the pin.* The hub can trust several SPIRE servers, each with its own trust domain. The
+  OCM user comes from the path of the SVID (`/ocm/cluster/<name>/...`), not from the trust
+  domain. Without the pin, the admin of one SPIRE could issue an SVID with the name of a cluster
+  that belongs to another SPIRE and take that cluster over.
+
+**Code**
+
+| Part | Where |
+| --- | --- |
+| Set the pin, keep it on updates | [`pinTrustDomain`](../../ocm/pkg/server/services/cluster/cluster.go#L185), [`cluster.go`](../../ocm/pkg/server/services/cluster/cluster.go#L109) |
+| The gate: acceptance, pin, deletion, add-on | [`clusterGate.check`](../../ocm/pkg/server/grpc/spiffe_gate.go#L61) |
+| clusteradm | [`spiffeAcceptance`](../../clusteradm/pkg/cmd/accept/spiffe.go#L18) |
 
 **Tests:** [`cluster_spiffe_test.go`](../../ocm/pkg/server/services/cluster/cluster_spiffe_test.go),
-[`spiffe_gate_test.go`](../../ocm/pkg/server/grpc/spiffe_gate_test.go).
+[`spiffe_gate_test.go`](../../ocm/pkg/server/grpc/spiffe_gate_test.go),
+e2e `check-deny.sh` (a denied cluster stops receiving work).
 
 ### 6.4 Send work to a cluster
 
-**Who:** a hub user who creates a `ManifestWork`.
+**Who:** a hub user who creates a `ManifestWork` in the cluster's namespace.
 
-**What happens:** the work agent connects to the SPIFFE port with **its own** SVID (role `work`)
-and receives the work for its cluster. It applies it and sends the status back. In `Singleton`
-mode one process does registration and work with a single SVID (role `klusterlet`).
+![A hub user sends work to a cluster](work.svg)
+
+**What they do:** create the `ManifestWork`, as with any other driver. Nothing about it is
+SPIFFE-specific.
+
+**What happens**
+
+1. *The work agent connects with its own SVID.* It asks the local SPIRE agent (Workload API) for
+   the SVID with its ID, `.../ocm/cluster/cluster1/agent/work`, and keeps it in memory. It opens
+   an mTLS connection to the hub's SPIFFE listener with that SVID and watches the
+   `ManifestWork`s of its cluster. The listener runs checks 1 to 7
+   ([4.2](#42-what-the-hub-checks-on-every-request)) before it lets the watch start.
+2. *The hub sends the work.* The hub user creates the `ManifestWork` in namespace `cluster1`.
+   The listener sees it through its informer and sends it to the work agent as an event on the
+   open watch. The agent applies the manifests on the managed cluster.
+3. *The agent sends the status back.* It sends `Applied`, `Available` and any status feedback
+   to the listener. The listener runs the same checks again and writes the status to the
+   `ManifestWork` on the hub.
+
+If the work agent of `cluster1` asks for anything about `cluster2`, the listener refuses it at
+check 5: `system:open-cluster-management:cluster1:work may not act on cluster "cluster2"`.
+
+**Install modes**
+
+| Mode | Who does the work | SVID |
+| --- | --- | --- |
+| `Default` | the work agent | role `work`, user `system:open-cluster-management:<c>:work` |
+| `Singleton` | one process does registration and work | role `klusterlet`, user `system:open-cluster-management:<c>:klusterlet` |
+| `Hosted`, `SingletonHosted` | as above, but the agent runs on the management cluster and applies to the managed cluster | as above |
 
 **Why**
 
@@ -455,15 +513,19 @@ mode one process does registration and work with a single SVID (role `klusterlet
   a Secret and the work agent reads them. Here the two agents share nothing, so no Secret is
   needed.
 - *Checked on every request.* A valid SVID proves the caller is the work agent of `cluster1`. It
-  does not by itself stop it from asking about `cluster2`. So the hub compares every request with
-  the cluster in the SVID (step 5 in [4.2](#42-what-the-hub-checks-on-every-request)).
-- *Health check.* The work agent reports when its SVID is missing, so an admin sees that the
-  SPIRE entry is missing and does not have to guess.
+  doesn't stop it from asking about `cluster2`. So the hub compares every request with the
+  cluster in the SVID (check 5).
+- *Health check.* The work agent's `spiffe-svid` health check is not ready while the SVID with
+  its ID is missing, and it names the expected ID and the IDs that did arrive. An admin sees at
+  once that the SPIRE entry is missing.
 
-**Code:** work agent connection in
-[`work/spoke/spokeagent.go`](../../ocm/pkg/work/spoke/spokeagent.go#L220), health check
-[`spiffe-svid`](../../ocm/pkg/work/spoke/spokeagent.go#L307),
-[`authorizeSPIFFE`](../../sdk-go/pkg/cloudevents/server/grpc/authz/kube/sar.go#L228).
+**Code**
+
+| Part | Where |
+| --- | --- |
+| Work agent connection with its SVID | [`work/spoke/spokeagent.go`](../../ocm/pkg/work/spoke/spokeagent.go#L220) |
+| Health check `spiffe-svid` | [`HealthCheckers`](../../ocm/pkg/work/spoke/spokeagent.go#L306) |
+| Own cluster only, no certificates or tokens | [`authorizeSPIFFE`](../../sdk-go/pkg/cloudevents/server/grpc/authz/kube/sar.go#L228) |
 
 **Tests:** [`sar_spiffe_test.go`](../../sdk-go/pkg/cloudevents/server/grpc/authz/kube/sar_spiffe_test.go),
 integration: "the work agent applies ManifestWorks with its own SVID"
@@ -638,6 +700,10 @@ integration: "an add-on agent acts for its own add-on only, until the add-on is 
 All four Klusterlet install modes work. They differ in where the agents run and how many there
 are. The enhancement has a diagram of this
 ([modes](../../enhancements/enhancements/sig-architecture/199-spiffe-grpc-registration/spiffe-grpc-registration-modes.svg)).
+
+Each mode has its own guide, from setup to deletion: [Default](mode-default.md),
+[Singleton](mode-singleton.md), [Hosted](mode-hosted.md),
+[SingletonHosted](mode-singletonhosted.md).
 
 | Mode | Agents | Runs in | ServiceAccount | `spiffe-role` |
 | --- | --- | --- | --- | --- |

@@ -1,0 +1,64 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 860" width="1200" height="860" font-family="Helvetica, Arial, sans-serif">
+<defs><marker id="ak" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#333"/></marker><marker id="ag" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#2e7d32"/></marker><marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#c62828"/></marker><marker id="ab" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#3a5bc7"/></marker></defs>
+<rect width="1200" height="860" fill="#ffffff"/>
+<text x="600" y="32" font-size="20" font-weight="bold" fill="#1a1a1a" text-anchor="middle">Use case: the hub admin accepts a cluster</text>
+<line x1="110" y1="96" x2="110" y2="780" stroke="#bbb" stroke-width="1" stroke-dasharray="4 4"/>
+<rect x="10" y="56" width="200" height="40" rx="6" fill="#fff4e5" stroke="#b26a00" stroke-width="1.3"/>
+<text x="110" y="80" font-size="12.5" font-weight="bold" fill="#1a1a1a" text-anchor="middle">Hub admin</text>
+<line x1="340" y1="96" x2="340" y2="780" stroke="#bbb" stroke-width="1" stroke-dasharray="4 4"/>
+<rect x="240" y="56" width="200" height="40" rx="6" fill="#f5f2fa" stroke="#6a4c9c" stroke-width="1.3"/>
+<text x="340" y="80" font-size="12.5" font-weight="bold" fill="#1a1a1a" text-anchor="middle">Hub controllers</text>
+<line x1="580" y1="96" x2="580" y2="780" stroke="#bbb" stroke-width="1" stroke-dasharray="4 4"/>
+<rect x="480" y="56" width="200" height="40" rx="6" fill="#f5f2fa" stroke="#6a4c9c" stroke-width="1.3"/>
+<text x="580" y="80" font-size="12.5" font-weight="bold" fill="#1a1a1a" text-anchor="middle">Hub SPIFFE listener</text>
+<line x1="830" y1="96" x2="830" y2="780" stroke="#bbb" stroke-width="1" stroke-dasharray="4 4"/>
+<rect x="730" y="56" width="200" height="40" rx="6" fill="#f3f6fc" stroke="#3a5bc7" stroke-width="1.3"/>
+<text x="830" y="80" font-size="12.5" font-weight="bold" fill="#1a1a1a" text-anchor="middle">Registration agent</text>
+<line x1="1070" y1="96" x2="1070" y2="780" stroke="#bbb" stroke-width="1" stroke-dasharray="4 4"/>
+<rect x="970" y="56" width="200" height="40" rx="6" fill="#f3f6fc" stroke="#3a5bc7" stroke-width="1.3"/>
+<text x="1070" y="80" font-size="12.5" font-weight="bold" fill="#1a1a1a" text-anchor="middle">Work and add-on agents</text>
+<rect x="10" y="112" width="1180" height="22" rx="4" fill="#f0f0f0"/>
+<text x="20" y="127.5" font-size="12" font-weight="bold" fill="#444" text-anchor="start">1. Before acceptance: the cluster exists (6.2), hubAcceptsClient is false</text>
+<path d="M830,168 L582,168" fill="none" stroke="#3a5bc7" stroke-width="1.5" marker-end="url(#ab)"/>
+<text x="705.0" y="148" font-size="11.5" font-weight="normal" fill="#3a5bc7" text-anchor="middle" paint-order="stroke" stroke="#fff" stroke-width="4" stroke-linejoin="round">read its own ManagedCluster,</text>
+<text x="705.0" y="162" font-size="11.5" font-weight="normal" fill="#3a5bc7" text-anchor="middle" paint-order="stroke" stroke="#fff" stroke-width="4" stroke-linejoin="round">wait for acceptance</text>
+<rect x="480.0" y="180" width="200" height="42" rx="6" fill="#eef7ee" stroke="#2e7d32" stroke-width="1.3"/>
+<text x="580" y="200" font-size="12" font-weight="bold" fill="#1a1a1a" text-anchor="middle">allowed</text>
+<text x="580" y="215" font-size="11" font-weight="normal" fill="#333" text-anchor="middle">pre-acceptance permission</text>
+<path d="M1070,256 L582,256" fill="none" stroke="#3a5bc7" stroke-width="1.5" marker-end="url(#ab)"/>
+<text x="825.0" y="250" font-size="11.5" font-weight="normal" fill="#3a5bc7" text-anchor="middle" paint-order="stroke" stroke="#fff" stroke-width="4" stroke-linejoin="round">connect with work / add-on SVID</text>
+<rect x="465.0" y="268" width="230" height="42" rx="6" fill="#fdecea" stroke="#c62828" stroke-width="1.3"/>
+<text x="580" y="288" font-size="12" font-weight="bold" fill="#1a1a1a" text-anchor="middle">refused by the cluster gate</text>
+<text x="580" y="303" font-size="11" font-weight="normal" fill="#333" text-anchor="middle">&quot;cluster1 is not accepted by the hub&quot;</text>
+<rect x="10" y="334" width="1180" height="22" rx="4" fill="#f0f0f0"/>
+<text x="20" y="349.5" font-size="12" font-weight="bold" fill="#444" text-anchor="start">2. Accept</text>
+<path d="M110,384 L338,384" fill="none" stroke="#333" stroke-width="1.5" marker-end="url(#ak)"/>
+<text x="225.0" y="364" font-size="11.5" font-weight="normal" fill="#222" text-anchor="middle" paint-order="stroke" stroke="#fff" stroke-width="4" stroke-linejoin="round">hubAcceptsClient: true</text>
+<text x="225.0" y="378" font-size="11.5" font-weight="normal" fill="#222" text-anchor="middle" paint-order="stroke" stroke="#fff" stroke-width="4" stroke-linejoin="round">(or clusteradm accept)</text>
+<rect x="225.0" y="396" width="230" height="57" rx="6" fill="#ffffff" stroke="#555" stroke-width="1.3"/>
+<text x="340" y="416" font-size="12" font-weight="bold" fill="#1a1a1a" text-anchor="middle">give the cluster its permissions</text>
+<text x="340" y="431" font-size="11" font-weight="normal" fill="#333" text-anchor="middle">cluster namespace, RoleBindings</text>
+<text x="340" y="446" font-size="11" font-weight="normal" fill="#333" text-anchor="middle">for the agents and add-ons</text>
+<rect x="20.0" y="396" width="180" height="42" rx="6" fill="#fff4e5" stroke="#b26a00" stroke-width="1.3"/>
+<text x="110" y="416" font-size="11" font-weight="normal" fill="#1a1a1a" text-anchor="middle">no CSR to approve,</text>
+<text x="110" y="431" font-size="11" font-weight="normal" fill="#333" text-anchor="middle">no token to hand out</text>
+<rect x="10" y="478" width="1180" height="22" rx="4" fill="#f0f0f0"/>
+<text x="20" y="493.5" font-size="12" font-weight="bold" fill="#444" text-anchor="start">3. After acceptance</text>
+<path d="M580,530 L828,530" fill="none" stroke="#3a5bc7" stroke-width="1.5" marker-end="url(#ab)"/>
+<text x="705.0" y="524" font-size="11.5" font-weight="normal" fill="#3a5bc7" text-anchor="middle" paint-order="stroke" stroke="#fff" stroke-width="4" stroke-linejoin="round">sees hubAcceptsClient: true</text>
+<rect x="725.0" y="542" width="210" height="27" rx="6" fill="#e3ebfb" stroke="#3a5bc7" stroke-width="1.3"/>
+<text x="830" y="562" font-size="11" font-weight="normal" fill="#1a1a1a" text-anchor="middle">Joined, lease updates start</text>
+<path d="M1070,610 L582,610" fill="none" stroke="#3a5bc7" stroke-width="1.5" marker-end="url(#ab)"/>
+<text x="825.0" y="604" font-size="11.5" font-weight="normal" fill="#3a5bc7" text-anchor="middle" paint-order="stroke" stroke="#fff" stroke-width="4" stroke-linejoin="round">connect with work / add-on SVID</text>
+<rect x="460.0" y="622" width="240" height="72" rx="6" fill="#eef7ee" stroke="#2e7d32" stroke-width="1.3"/>
+<text x="580" y="642" font-size="12" font-weight="bold" fill="#1a1a1a" text-anchor="middle">cluster gate checks the pin:</text>
+<text x="580" y="657" font-size="11" font-weight="normal" fill="#333" text-anchor="middle">SVID trust domain = annotation?</text>
+<text x="580" y="672" font-size="11" font-weight="normal" fill="#333" text-anchor="middle">yes: on to the SVID check and RBAC</text>
+<text x="580" y="687" font-size="11" font-weight="normal" fill="#333" text-anchor="middle">no: refused, even after acceptance</text>
+<path d="M580,720 L1068,720" fill="none" stroke="#3a5bc7" stroke-width="1.5" marker-end="url(#ab)"/>
+<text x="825.0" y="714" font-size="11.5" font-weight="normal" fill="#3a5bc7" text-anchor="middle" paint-order="stroke" stroke="#fff" stroke-width="4" stroke-linejoin="round">ManifestWorks and add-on resources</text>
+<rect x="20" y="790" width="1160" height="56" rx="6" fill="#fafafa" stroke="#999" stroke-width="1.3"/>
+<text x="36" y="812" font-size="12" font-weight="bold" fill="#1a1a1a" text-anchor="start">The pin:</text>
+<text x="100" y="812" font-size="11.5" font-weight="normal" fill="#333" text-anchor="start">annotation open-cluster-management.io/spiffe-trust-domain on the ManagedCluster. The hub sets it from the SVID when the agent creates the cluster (6.2).</text>
+<text x="100" y="830" font-size="11.5" font-weight="normal" fill="#333" text-anchor="start">The agent can&#x27;t change it; only a hub user with update access can. A cluster with no pin counts as pinned only when the hub accepts one trust domain.</text>
+</svg>
