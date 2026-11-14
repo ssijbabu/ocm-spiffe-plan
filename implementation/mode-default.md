@@ -156,10 +156,70 @@ accepted again. In `Singleton` mode this split is not possible
 
 ## 7. Known limits
 
-| Limit | Details |
+Each limit below says what it is in simple words, shows an example, explains why it happens and
+what you can do about it.
+
+### 7.1 Short SVIDs make updates arrive late
+
+**In simple words.** If SPIRE gives the agents SVIDs that live less than about 10 minutes, the
+agents reconnect to the hub very often. The client then starts to wait longer before each
+reconnect, and while it waits, changes from the hub don't reach the cluster. Nothing is lost,
+but an update can arrive up to about a minute late.
+
+**Example.** The SPIRE entry for `cluster1` has `ttl: 2m`.
+
+| Time | What happens |
 | --- | --- |
-| Short SVIDs | With SVIDs that live less than 10 minutes, an update can arrive up to about a minute late after a reconnect. Nothing is lost (`questions.md` Q18). |
-| Custom ID template | Not run end to end yet. |
+| 10:00:00 | The agent connects with SVID #1, valid until 10:02. |
+| 10:02:00 | SVID #1 expires. The hub closes the connection, as designed ([README 6.5](README.md#65-renew-an-svid)). |
+| 10:02:07 | The client waits 5 to 10 seconds, then reconnects with SVID #2. |
+| 10:04:00 | SVID #2 expires and the connection is closed again. This time the client waits 25 to 50 seconds, because it reconnected less than 10 minutes ago. |
+| 10:04:10 | A hub user changes a `ManifestWork` for `cluster1`. |
+| 10:04:40 | The agent reconnects, resyncs and gets the change: **30 seconds late**. |
+
+In the e2e test (2-minute SVIDs, 13 updates over 5 minutes) one update came 42 seconds late. All
+13 arrived.
+
+**Why it happens.** The client that OCM's agents use to talk to the hub treats every closed
+connection as a failure. After a failure it waits before trying again: 5 to 10 seconds the first
+time, then 25 to 50 seconds, up to 60 seconds. It goes back to the short wait only after 10
+minutes without a reconnect. With short SVIDs the connection is closed every few minutes, so the
+wait never goes back to short.
+
+**What you can do.** Give agent SVIDs a lifetime of 10 minutes or more. SPIRE's default X.509
+lifetime is one hour, and with that this doesn't happen: each reconnect has only the normal 5 to
+10 second gap.
+
+**Status.** Open, `questions.md` Q18. A change to the client in `sdk-go` is proposed: don't count
+a close at SVID expiry as a failure.
+
+### 7.2 A custom SPIFFE ID layout is not tested on real clusters
+
+**In simple words.** You can choose your own layout for the agents' SPIFFE IDs
+([README 6.13](README.md#613-use-your-own-spiffe-id-layout)). That is tested in unit and
+integration tests, but not yet end to end on real clusters with real SPIRE. And changing the
+layout on a hub that is already running cuts off every cluster for a while.
+
+**Example.** A company names its workloads
+`spiffe://ocm-hub.example.org/k8s/<cluster>/ns/<namespace>/ocm/<role>`. They set this as
+`agentIDTemplate` on the `ClusterManager` of a hub that already has 50 clusters.
+
+1. The hub now accepts only IDs in the new layout. All 50 clusters' agents still have SVIDs in
+   the old layout (`.../ocm/cluster/<cluster>/agent/<role>`).
+2. Their connections are refused with `matches neither agentIDTemplate`.
+3. Each cluster comes back only after its `Klusterlet` has the same template and its SPIRE
+   entries give the new IDs.
+
+**Why it happens.** The hub reads the cluster name and the role from the ID with **one**
+template. It can't accept two layouts at the same time, because then one ID could be read in two
+ways.
+
+**What you can do.** Pick the layout before the first cluster joins. If you must change it, do
+it in this order for the least downtime: add the new SPIRE entries first (agents then hold both
+SVIDs), change the `ClusterManager`, change each `Klusterlet` quickly, and then delete the old
+entries ([`../clusterspiffeid.md`](../clusterspiffeid.md#custom-id-templates)).
+
+**Status.** The e2e check for this (Day 27, Task 7) was not run. `questions.md` Q7.
 
 ## 8. Test status
 

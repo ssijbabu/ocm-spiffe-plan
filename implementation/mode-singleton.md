@@ -135,10 +135,84 @@ Recovery after a policy change is the same as in every mode
 
 ## 7. Known limits
 
-| Limit | Details |
+Each limit below says what it is in simple words, shows an example, explains why it happens and
+what you can do about it.
+
+### 7.1 A denied cluster can still get work
+
+**In simple words.** When the hub admin denies a cluster (`hubAcceptsClient: false`), the hub
+should stop sending it work. In this mode it doesn't: the one agent keeps receiving
+`ManifestWork`s. This is the same as the `csr` driver in singleton mode today.
+
+**Example.**
+
+| Time | What happens |
 | --- | --- |
-| **A denied cluster can still get work** | The gate refuses agents by role. The singleton agent's role is `klusterlet`, which covers both registration and work, so the gate lets it through to keep the registration part working. The hub keeps the cluster's work RoleBinding when it is denied, so the agent's work requests still pass RBAC. This is the same as with the `csr` driver today, where the singleton agent's one certificate also keeps working. Fixing it needs the gate to look at the type of each request (`questions.md` Q19). If this matters, use `Default` mode. |
-| Short SVIDs | With SVIDs that live less than 10 minutes, an update can arrive up to about a minute late after a reconnect. Nothing is lost (`questions.md` Q18). |
+| 10:00:00 | `cluster2` is accepted and running. |
+| 10:01:00 | The hub admin sets `hubAcceptsClient: false` on `cluster2`. |
+| 10:01:00 | The hub closes all of `cluster2`'s connections. |
+| 10:01:07 | The agent reconnects with the same SVID (role `klusterlet`). The cluster gate lets it in. |
+| 10:05:00 | A hub user creates a `ManifestWork` in namespace `cluster2`. |
+| 10:05:00 | The agent receives it and applies it. **The deny didn't stop the work.** |
+
+In `Default` mode the same steps end differently: at 10:01:07 the work agent (role `work`) is
+refused with `cluster cluster2 is not accepted by the hub`, and the `ManifestWork` never arrives.
+
+**Why it happens.** The hub decides by the role in the SVID.
+
+- A denied cluster's **registration** agent must still be let in, so it can see when the cluster
+  is accepted again.
+- A denied cluster's **work** agent must be kept out.
+- In this mode one agent does both, with one SVID and the role `klusterlet`. The gate can't keep
+  out half of an agent, so it lets it in.
+- Once it is in, the normal permission check (RBAC) decides. The hub keeps the cluster's work
+  RoleBinding when a cluster is denied, so the agent's work requests still pass.
+
+**What you can do.**
+
+- If denial must stop work, use `Default` mode.
+- To stop work for a denied cluster in this mode, also delete its `ManifestWork`s, or remove the
+  cluster from its placements.
+- To cut the cluster off completely, delete its SPIRE entry. The agent then can't get a new SVID,
+  and is refused when its current one expires (at most the SVID lifetime later).
+
+**Status.** Open, `questions.md` Q19. A fix would make the gate look at what each request is
+about: allow only the cluster's own `ManagedCluster` and lease for a denied cluster, and refuse
+`ManifestWork`s.
+
+### 7.2 Short SVIDs make updates arrive late
+
+**In simple words.** If SPIRE gives the agents SVIDs that live less than about 10 minutes, the
+agents reconnect to the hub very often. The client then starts to wait longer before each
+reconnect, and while it waits, changes from the hub don't reach the cluster. Nothing is lost,
+but an update can arrive up to about a minute late.
+
+**Example.** The SPIRE entry for `cluster2` has `ttl: 2m`.
+
+| Time | What happens |
+| --- | --- |
+| 10:00:00 | The agent connects with SVID #1, valid until 10:02. |
+| 10:02:00 | SVID #1 expires. The hub closes the connection, as designed ([README 6.5](README.md#65-renew-an-svid)). |
+| 10:02:07 | The client waits 5 to 10 seconds, then reconnects with SVID #2. |
+| 10:04:00 | SVID #2 expires and the connection is closed again. This time the client waits 25 to 50 seconds, because it reconnected less than 10 minutes ago. |
+| 10:04:10 | A hub user changes a `ManifestWork` for `cluster2`. |
+| 10:04:40 | The agent reconnects, resyncs and gets the change: **30 seconds late**. |
+
+In the e2e test (2-minute SVIDs, 13 updates over 5 minutes) one update came 42 seconds late. All
+13 arrived.
+
+**Why it happens.** The client that OCM's agents use to talk to the hub treats every closed
+connection as a failure. After a failure it waits before trying again: 5 to 10 seconds the first
+time, then 25 to 50 seconds, up to 60 seconds. It goes back to the short wait only after 10
+minutes without a reconnect. With short SVIDs the connection is closed every few minutes, so the
+wait never goes back to short.
+
+**What you can do.** Give agent SVIDs a lifetime of 10 minutes or more. SPIRE's default X.509
+lifetime is one hour, and with that this doesn't happen: each reconnect has only the normal 5 to
+10 second gap.
+
+**Status.** Open, `questions.md` Q18. A change to the client in `sdk-go` is proposed: don't count
+a close at SVID expiry as a failure.
 
 ## 8. Test status
 

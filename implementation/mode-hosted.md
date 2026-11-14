@@ -179,11 +179,103 @@ seen at the next resync, within five minutes (`questions.md` Q20).
 
 ## 7. Known limits
 
-| Limit | Details |
+Each limit below says what it is in simple words, shows an example, explains why it happens and
+what you can do about it.
+
+### 7.1 The managed cluster's kubeconfig is kept in a Secret
+
+**In simple words.** The agents run on the management cluster, but they must change things on
+the managed cluster. To do that they need a kubeconfig for the managed cluster, and it is stored
+in a Secret, `external-managed-kubeconfig`, on the management cluster. It is not a credential
+for the hub, but it is long-lived, and the design's rule is that OCM handles no long-lived
+secrets.
+
+**Example.**
+
+1. The admin runs `clusteradm join --mode hosted --managed-cluster-kubeconfig ./cluster4.kubeconfig`.
+2. The contents of `./cluster4.kubeconfig` are stored in the Secret `external-managed-kubeconfig` in
+   the agent namespace on the management cluster.
+3. The work agent uses it to apply `ManifestWork`s on the managed cluster.
+4. Anyone who can read Secrets in that namespace can copy the kubeconfig and use it on the
+   managed cluster, for as long as the credential in it is valid. It can't be used against the
+   hub: the hub accepts only SVIDs.
+
+**Why it happens.** This is how hosted mode works with every driver. SPIFFE replaces the
+credential for the **hub**; the agents reach the **managed** cluster's own API server, which
+doesn't accept SVIDs.
+
+**What you can do.**
+
+- Allow only the operator and the agents to read Secrets in the agent namespace.
+- Put a credential in the kubeconfig that has only the permissions the agents need, not a
+  cluster-admin one, and replace it regularly.
+
+**Status.** Open, `questions.md` Q15: confirm in review that access to the managed cluster is
+outside the "no long-lived secrets" rule, and say so in the proposal.
+
+### 7.2 A changed policy on the managed cluster is noticed only within five minutes
+
+**In simple words.** The operator protects the agents with admission policies, and if someone
+deletes or changes one, it repairs it and replaces the pods. For the policy on the management
+cluster that happens within seconds. For the two policies on the managed cluster it can take up
+to five minutes, and during that time the add-on namespaces are not protected.
+
+**Example.**
+
+| Time | What happens |
 | --- | --- |
-| **The managed cluster's kubeconfig is a Secret** | `external-managed-kubeconfig` on the management cluster holds the kubeconfig the agents use to reach the managed cluster. It is not a hub credential and every driver needs it in this mode, but it is long-lived. Whether that is in scope of "no long-lived secrets" is open (`questions.md` Q15). |
-| Policies on the managed cluster | Checked only at the five-minute resync (`questions.md` Q20). |
-| Short SVIDs | With SVIDs that live less than 10 minutes, an update can arrive up to about a minute late after a reconnect (`questions.md` Q18). |
+| 10:00:00 | A cluster admin on the managed cluster deletes `ocm-spiffe-addons-cluster4`. |
+| 10:00:00 | The operator runs on the management cluster and doesn't see it. |
+| 10:01:00 | Someone creates a pod in the add-on namespace with role `addon` and the add-on's ServiceAccount. No policy stops it. SPIRE gives it the add-on's SVID, and it can act as that add-on on the hub. |
+| 10:04:30 | The operator's regular check (every five minutes) finds the policy missing. It restores it and deletes every workload in `cluster4`'s add-on namespaces, including the fake pod. The real add-on pods are created again. |
+
+If the same admin had deleted the agent policy `ocm-spiffe-agents-cluster4` on the management cluster, the operator
+would have repaired it in about six seconds (measured in e2e).
+
+**Why it happens.** The operator watches the policies on the cluster it runs on, so it hears
+about a change at once. It doesn't watch the managed cluster; it only checks it on its regular
+pass.
+
+**What you can do.** Only cluster admins can delete admission policies. Keep the number of
+cluster admins on the managed cluster small, and alert on changes to `ValidatingAdmissionPolicy`
+objects whose names start with `ocm-spiffe-`.
+
+**Status.** Open, `questions.md` Q20. A fix would add a watch on the managed cluster's policies,
+through the managed cluster's kubeconfig.
+
+### 7.3 Short SVIDs make updates arrive late
+
+**In simple words.** If SPIRE gives the agents SVIDs that live less than about 10 minutes, the
+agents reconnect to the hub very often. The client then starts to wait longer before each
+reconnect, and while it waits, changes from the hub don't reach the cluster. Nothing is lost,
+but an update can arrive up to about a minute late.
+
+**Example.** The SPIRE entry for `cluster4` has `ttl: 2m`.
+
+| Time | What happens |
+| --- | --- |
+| 10:00:00 | The agent connects with SVID #1, valid until 10:02. |
+| 10:02:00 | SVID #1 expires. The hub closes the connection, as designed ([README 6.5](README.md#65-renew-an-svid)). |
+| 10:02:07 | The client waits 5 to 10 seconds, then reconnects with SVID #2. |
+| 10:04:00 | SVID #2 expires and the connection is closed again. This time the client waits 25 to 50 seconds, because it reconnected less than 10 minutes ago. |
+| 10:04:10 | A hub user changes a `ManifestWork` for `cluster4`. |
+| 10:04:40 | The agent reconnects, resyncs and gets the change: **30 seconds late**. |
+
+In the e2e test (2-minute SVIDs, 13 updates over 5 minutes) one update came 42 seconds late. All
+13 arrived.
+
+**Why it happens.** The client that OCM's agents use to talk to the hub treats every closed
+connection as a failure. After a failure it waits before trying again: 5 to 10 seconds the first
+time, then 25 to 50 seconds, up to 60 seconds. It goes back to the short wait only after 10
+minutes without a reconnect. With short SVIDs the connection is closed every few minutes, so the
+wait never goes back to short.
+
+**What you can do.** Give agent SVIDs a lifetime of 10 minutes or more. SPIRE's default X.509
+lifetime is one hour, and with that this doesn't happen: each reconnect has only the normal 5 to
+10 second gap.
+
+**Status.** Open, `questions.md` Q18. A change to the client in `sdk-go` is proposed: don't count
+a close at SVID expiry as a failure.
 
 ## 8. Test status
 

@@ -150,14 +150,148 @@ seen within seconds; a change on the managed cluster at the next resync, within 
 
 ## 7. Known limits
 
-This mode has the limits of both `Singleton` and `Hosted`.
+Each limit below says what it is in simple words, shows an example, explains why it happens and
+what you can do about it.
 
-| Limit | From | Details |
-| --- | --- | --- |
-| **A denied cluster can still get work** | `Singleton` | The one agent's role covers registration and work, so the gate lets it through while the cluster is denied, and the kept work RoleBinding lets its work requests pass (`questions.md` Q19). Use `Hosted` mode if this matters. |
-| **The managed cluster's kubeconfig is a Secret** | `Hosted` | `external-managed-kubeconfig` on the management cluster is long-lived. Not a hub credential, and every driver needs it; whether it is in scope is open (`questions.md` Q15). |
-| Policies on the managed cluster | `Hosted` | Checked only at the five-minute resync (`questions.md` Q20). |
-| Short SVIDs | all | With SVIDs under 10 minutes, an update can arrive up to about a minute late after a reconnect (`questions.md` Q18). |
+This mode has the limits of both `Singleton` (7.1) and `Hosted` (7.2, 7.3), and the one that
+applies to every mode (7.4).
+
+### 7.1 A denied cluster can still get work
+
+**In simple words.** When the hub admin denies a cluster (`hubAcceptsClient: false`), the hub
+should stop sending it work. In this mode it doesn't: the one agent keeps receiving
+`ManifestWork`s. This is the same as the `csr` driver in singleton mode today.
+
+**Example.**
+
+| Time | What happens |
+| --- | --- |
+| 10:00:00 | `cluster5` is accepted and running. |
+| 10:01:00 | The hub admin sets `hubAcceptsClient: false` on `cluster5`. |
+| 10:01:00 | The hub closes all of `cluster5`'s connections. |
+| 10:01:07 | The agent reconnects with the same SVID (role `klusterlet`). The cluster gate lets it in. |
+| 10:05:00 | A hub user creates a `ManifestWork` in namespace `cluster5`. |
+| 10:05:00 | The agent receives it and applies it. **The deny didn't stop the work.** |
+
+In `Hosted` mode the same steps end differently: at 10:01:07 the work agent (role `work`) is
+refused with `cluster cluster5 is not accepted by the hub`, and the `ManifestWork` never arrives.
+
+**Why it happens.** The hub decides by the role in the SVID.
+
+- A denied cluster's **registration** agent must still be let in, so it can see when the cluster
+  is accepted again.
+- A denied cluster's **work** agent must be kept out.
+- In this mode one agent does both, with one SVID and the role `klusterlet`. The gate can't keep
+  out half of an agent, so it lets it in.
+- Once it is in, the normal permission check (RBAC) decides. The hub keeps the cluster's work
+  RoleBinding when a cluster is denied, so the agent's work requests still pass.
+
+**What you can do.**
+
+- If denial must stop work, use `Hosted` mode.
+- To stop work for a denied cluster in this mode, also delete its `ManifestWork`s, or remove the
+  cluster from its placements.
+- To cut the cluster off completely, delete its SPIRE entry. The agent then can't get a new SVID,
+  and is refused when its current one expires (at most the SVID lifetime later).
+
+**Status.** Open, `questions.md` Q19. A fix would make the gate look at what each request is
+about: allow only the cluster's own `ManagedCluster` and lease for a denied cluster, and refuse
+`ManifestWork`s.
+
+### 7.2 The managed cluster's kubeconfig is kept in a Secret
+
+**In simple words.** The agents run on the management cluster, but they must change things on
+the managed cluster. To do that they need a kubeconfig for the managed cluster, and it is stored
+in a Secret, `external-managed-kubeconfig`, on the management cluster. It is not a credential
+for the hub, but it is long-lived, and the design's rule is that OCM handles no long-lived
+secrets.
+
+**Example.**
+
+1. The admin runs `clusteradm join --mode hosted --managed-cluster-kubeconfig ./cluster5.kubeconfig`.
+2. The contents of `./cluster5.kubeconfig` are stored in the Secret `external-managed-kubeconfig` in
+   the agent namespace on the management cluster.
+3. The work agent uses it to apply `ManifestWork`s on the managed cluster.
+4. Anyone who can read Secrets in that namespace can copy the kubeconfig and use it on the
+   managed cluster, for as long as the credential in it is valid. It can't be used against the
+   hub: the hub accepts only SVIDs.
+
+**Why it happens.** This is how hosted mode works with every driver. SPIFFE replaces the
+credential for the **hub**; the agents reach the **managed** cluster's own API server, which
+doesn't accept SVIDs.
+
+**What you can do.**
+
+- Allow only the operator and the agents to read Secrets in the agent namespace.
+- Put a credential in the kubeconfig that has only the permissions the agents need, not a
+  cluster-admin one, and replace it regularly.
+
+**Status.** Open, `questions.md` Q15: confirm in review that access to the managed cluster is
+outside the "no long-lived secrets" rule, and say so in the proposal.
+
+### 7.3 A changed policy on the managed cluster is noticed only within five minutes
+
+**In simple words.** The operator protects the agents with admission policies, and if someone
+deletes or changes one, it repairs it and replaces the pods. For the policy on the management
+cluster that happens within seconds. For the two policies on the managed cluster it can take up
+to five minutes, and during that time the add-on namespaces are not protected.
+
+**Example.**
+
+| Time | What happens |
+| --- | --- |
+| 10:00:00 | A cluster admin on the managed cluster deletes `ocm-spiffe-addons-cluster5`. |
+| 10:00:00 | The operator runs on the management cluster and doesn't see it. |
+| 10:01:00 | Someone creates a pod in the add-on namespace with role `addon` and the add-on's ServiceAccount. No policy stops it. SPIRE gives it the add-on's SVID, and it can act as that add-on on the hub. |
+| 10:04:30 | The operator's regular check (every five minutes) finds the policy missing. It restores it and deletes every workload in `cluster5`'s add-on namespaces, including the fake pod. The real add-on pods are created again. |
+
+If the same admin had deleted the agent policy `ocm-spiffe-agents-cluster5` on the management cluster, the operator
+would have repaired it in about six seconds (measured in e2e).
+
+**Why it happens.** The operator watches the policies on the cluster it runs on, so it hears
+about a change at once. It doesn't watch the managed cluster; it only checks it on its regular
+pass.
+
+**What you can do.** Only cluster admins can delete admission policies. Keep the number of
+cluster admins on the managed cluster small, and alert on changes to `ValidatingAdmissionPolicy`
+objects whose names start with `ocm-spiffe-`.
+
+**Status.** Open, `questions.md` Q20. A fix would add a watch on the managed cluster's policies,
+through the managed cluster's kubeconfig.
+
+### 7.4 Short SVIDs make updates arrive late
+
+**In simple words.** If SPIRE gives the agents SVIDs that live less than about 10 minutes, the
+agents reconnect to the hub very often. The client then starts to wait longer before each
+reconnect, and while it waits, changes from the hub don't reach the cluster. Nothing is lost,
+but an update can arrive up to about a minute late.
+
+**Example.** The SPIRE entry for `cluster5` has `ttl: 2m`.
+
+| Time | What happens |
+| --- | --- |
+| 10:00:00 | The agent connects with SVID #1, valid until 10:02. |
+| 10:02:00 | SVID #1 expires. The hub closes the connection, as designed ([README 6.5](README.md#65-renew-an-svid)). |
+| 10:02:07 | The client waits 5 to 10 seconds, then reconnects with SVID #2. |
+| 10:04:00 | SVID #2 expires and the connection is closed again. This time the client waits 25 to 50 seconds, because it reconnected less than 10 minutes ago. |
+| 10:04:10 | A hub user changes a `ManifestWork` for `cluster5`. |
+| 10:04:40 | The agent reconnects, resyncs and gets the change: **30 seconds late**. |
+
+In the e2e test (2-minute SVIDs, 13 updates over 5 minutes) one update came 42 seconds late. All
+13 arrived.
+
+**Why it happens.** The client that OCM's agents use to talk to the hub treats every closed
+connection as a failure. After a failure it waits before trying again: 5 to 10 seconds the first
+time, then 25 to 50 seconds, up to 60 seconds. It goes back to the short wait only after 10
+minutes without a reconnect. With short SVIDs the connection is closed every few minutes, so the
+wait never goes back to short.
+
+**What you can do.** Give agent SVIDs a lifetime of 10 minutes or more. SPIRE's default X.509
+lifetime is one hour, and with that this doesn't happen: each reconnect has only the normal 5 to
+10 second gap.
+
+**Status.** Open, `questions.md` Q18. A change to the client in `sdk-go` is proposed: don't count
+a close at SVID expiry as a failure.
 
 ## 8. Test status
 
