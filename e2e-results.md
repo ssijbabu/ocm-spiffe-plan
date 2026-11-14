@@ -17,7 +17,7 @@ clusters (no SPIRE there: the agents run on the management cluster). OCM images 
 | 4 Rotation under load (TTL 2m, 13 updates over 5m) | nothing lost; 1 update late (Q18) | | | |
 | 5 Agent down past expiry | covered by 4 (agents reconnect with rotated SVIDs) | | | |
 | 6 Add-on revoke | not run (needs 3) | | | |
-| 7 Cluster deny | pass after fix `2bdd76cff` | | | |
+| 7 Cluster deny | pass after fix `2bdd76cff` | pass after fix `05f6b541b` (work stops; resumes 14s after accept) | pass | pass |
 | 8 Cluster delete: guard holds for maxSVIDLifetime + maxClockSkew | pass (3m + 1m; released on time) | | | |
 | 9 exec into an agent refused | pass | pass | pass | |
 | 11 tampered policy: recovery for that Klusterlet only | | | pass after fix `301d209f2` (6s; cluster5 untouched) | |
@@ -32,6 +32,7 @@ clusters (no SPIRE there: the agents run on the management cluster). OCM images 
 | ocm `9b2cd94bd` | Klusterlet status write conflicts lost the recovery record: agents started and were deleted again forever; the add-on namespace's record was lost and the namespace unlabeled. Recovery now ends the pass after recording; SPIFFE status fields are re-written on conflict. |
 | ocm `9b2cd94bd` | The work agent's spiffe-svid health check failed before leader election, so the liveness probe killed it before it could start. |
 | ocm `2bdd76cff` | A denied cluster's work agent reconnected at once (the hub keeps the work RoleBinding on deny). The gate refuses work and add-on agents of a cluster that isn't accepted. |
+| sdk-go `284a8c71`, ocm `05f6b541b` | A denied singleton cluster still got work: its one SVID is also the registration agent's, so the gate let it in (Q19). A denied cluster's requests are now also refused by data type: only its ManagedCluster, lease and events are allowed. |
 | ocm `8d1a4d175` | Deleting a spiffe Klusterlet left its admission policies. |
 | ocm `301d209f2` | A deleted agent policy went unnoticed until the 5-minute resync. The operator now watches policies and bindings. |
 | clusteradm `1c9b4a71` | `init` told admins to create SPIRE entries before `join`; they come after SPIFFEAdmissionReady. |

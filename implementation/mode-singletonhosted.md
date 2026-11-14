@@ -143,7 +143,7 @@ seen within seconds; a change on the managed cluster at the next resync, within 
 | --- | --- | --- |
 | Send work | The agent on the management cluster watches `cluster5`'s `ManifestWork`s with its `klusterlet` SVID and applies them on the **managed** cluster. The hub sees user `...:cluster5:klusterlet` for both registration and work. | [README 6.4](README.md#64-send-work-to-a-cluster) |
 | Renew | SPIRE on the management cluster renews the one SVID; registration and work reconnect together. | [README 6.5](README.md#65-renew-an-svid) |
-| Deny | As in `Singleton`: the connections are closed, but the gate does not refuse the agent afterwards, because it is also the registration agent. See section 7. | [README 6.6](README.md#66-deny-a-cluster-or-disable-an-add-on) |
+| Deny | As in `Singleton`: the connections are closed and the agent is let in again, because it is also the registration agent. Its `ManifestWork` and add-on requests are refused, so no work reaches the managed cluster until the cluster is accepted again. | [README 6.6](README.md#66-deny-a-cluster-or-disable-an-add-on) |
 | Delete | Remove the one entry on the management cluster, then delete the `ManagedCluster`. The hub holds the name for `maxSVIDLifetime + maxClockSkew`. | [README 6.7](README.md#67-delete-a-cluster) |
 | Add-ons | As in `Hosted`: an add-on deployed the usual way runs on the **managed** cluster, in a namespace labeled `cluster5`, so the managed cluster needs a SPIRE agent, the CSI driver and the add-on's entry. | [README 6.8](README.md#68-run-an-add-on) |
 | Remove the Klusterlet | The operator deletes its policies and bindings on both clusters, and the shared label policy if no other Klusterlet uses `spiffe`. | [README 6.14](README.md#614-move-an-existing-cluster-to-spiffe-and-back) |
@@ -153,52 +153,9 @@ seen within seconds; a change on the managed cluster at the next resync, within 
 Each limit below says what it is in simple words, shows an example, explains why it happens and
 what you can do about it.
 
-This mode has the limits of both `Singleton` (7.1) and `Hosted` (7.2, 7.3), and the one that
-applies to every mode (7.4).
+This mode has the limits of `Hosted` (7.1, 7.2), and the one that applies to every mode (7.3).
 
-### 7.1 A denied cluster can still get work
-
-**In simple words.** When the hub admin denies a cluster (`hubAcceptsClient: false`), the hub
-should stop sending it work. In this mode it doesn't: the one agent keeps receiving
-`ManifestWork`s. This is the same as the `csr` driver in singleton mode today.
-
-**Example.**
-
-| Time | What happens |
-| --- | --- |
-| 10:00:00 | `cluster5` is accepted and running. |
-| 10:01:00 | The hub admin sets `hubAcceptsClient: false` on `cluster5`. |
-| 10:01:00 | The hub closes all of `cluster5`'s connections. |
-| 10:01:07 | The agent reconnects with the same SVID (role `klusterlet`). The cluster gate lets it in. |
-| 10:05:00 | A hub user creates a `ManifestWork` in namespace `cluster5`. |
-| 10:05:00 | The agent receives it and applies it. **The deny didn't stop the work.** |
-
-In `Hosted` mode the same steps end differently: at 10:01:07 the work agent (role `work`) is
-refused with `cluster cluster5 is not accepted by the hub`, and the `ManifestWork` never arrives.
-
-**Why it happens.** The hub decides by the role in the SVID.
-
-- A denied cluster's **registration** agent must still be let in, so it can see when the cluster
-  is accepted again.
-- A denied cluster's **work** agent must be kept out.
-- In this mode one agent does both, with one SVID and the role `klusterlet`. The gate can't keep
-  out half of an agent, so it lets it in.
-- Once it is in, the normal permission check (RBAC) decides. The hub keeps the cluster's work
-  RoleBinding when a cluster is denied, so the agent's work requests still pass.
-
-**What you can do.**
-
-- If denial must stop work, use `Hosted` mode.
-- To stop work for a denied cluster in this mode, also delete its `ManifestWork`s, or remove the
-  cluster from its placements.
-- To cut the cluster off completely, delete its SPIRE entry. The agent then can't get a new SVID,
-  and is refused when its current one expires (at most the SVID lifetime later).
-
-**Status.** Open, `questions.md` Q19. A fix would make the gate look at what each request is
-about: allow only the cluster's own `ManagedCluster` and lease for a denied cluster, and refuse
-`ManifestWork`s.
-
-### 7.2 The managed cluster's kubeconfig is kept in a Secret
+### 7.1 The managed cluster's kubeconfig is kept in a Secret
 
 **In simple words.** The agents run on the management cluster, but they must change things on
 the managed cluster. To do that they need a kubeconfig for the managed cluster, and it is stored
@@ -229,7 +186,7 @@ doesn't accept SVIDs.
 **Status.** Open, `questions.md` Q15: confirm in review that access to the managed cluster is
 outside the "no long-lived secrets" rule, and say so in the proposal.
 
-### 7.3 A changed policy on the managed cluster is noticed only within five minutes
+### 7.2 A changed policy on the managed cluster is noticed only within five minutes
 
 **In simple words.** The operator protects the agents with admission policies, and if someone
 deletes or changes one, it repairs it and replaces the pods. For the policy on the management
@@ -259,7 +216,7 @@ objects whose names start with `ocm-spiffe-`.
 **Status.** Open, `questions.md` Q20. A fix would add a watch on the managed cluster's policies,
 through the managed cluster's kubeconfig.
 
-### 7.4 Short SVIDs make updates arrive late
+### 7.3 Short SVIDs make updates arrive late
 
 **In simple words.** If SPIRE gives the agents SVIDs that live less than about 10 minutes, the
 agents reconnect to the hub very often. The client then starts to wait longer before each
@@ -308,7 +265,8 @@ on `ocm-e2e-spoke` (management, shared with `cluster4` in `Hosted` mode), worklo
 | Left alone while `cluster4`'s policy was tampered with and recovered | pass |
 | `exec` into the agent refused | not run (the same policy passed in `Hosted` and `Singleton`) |
 | Add-ons | not run (the managed clusters had no SPIRE) |
-| Rotation, deny, delete | run in `Default` mode only; the hub side is the same |
+| Cluster deny: no work while denied, work resumes after accept | pass (after fix ocm `05f6b541b`) |
+| Rotation, delete | run in `Default` mode only; the hub side is the same |
 
 Unit tests for this mode: the `SingletonHosted` case in
 [`klusterlet_spiffe_test.go`](../../ocm/pkg/operator/operators/klusterlet/controllers/klusterletcontroller/klusterlet_spiffe_test.go).

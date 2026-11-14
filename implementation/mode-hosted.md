@@ -294,7 +294,8 @@ because no agent runs there.
 | Another Klusterlet's work agent in this one's add-on namespace | not run on real clusters |
 | Label put on `default` during recovery | not run on real clusters; unit test only |
 | Add-ons | not run (the managed clusters had no SPIRE) |
-| Rotation, deny, delete | run in `Default` mode only; the hub side is the same |
+| Cluster deny | pass |
+| Rotation, delete | run in `Default` mode only; the hub side is the same |
 
 Unit tests for this mode: the `Hosted` case in
 [`klusterlet_spiffe_test.go`](../../ocm/pkg/operator/operators/klusterlet/controllers/klusterletcontroller/klusterlet_spiffe_test.go),

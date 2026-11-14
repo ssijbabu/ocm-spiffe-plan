@@ -118,8 +118,8 @@ A request from an agent goes through seven checks. If one fails, the request is 
 | 1 | TLS handshake | Is the SVID signed by a SPIRE the admin listed, and does the ID look like an agent's ID? If not, the connection is dropped before anything is sent. | [`credentials.go`](../../sdk-go/pkg/server/grpc/spiffe/credentials.go#L53) |
 | 2 | Registry | Remember this connection: which cluster, which add-on, when the SVID expires. Set a timer that closes it at that time. | [`registry.go`](../../sdk-go/pkg/server/grpc/spiffe/registry.go#L67) |
 | 3 | Authenticator | Put the OCM user, the groups and the SPIFFE ID into the request, for the next checks. | [`authn/spiffe.go`](../../sdk-go/pkg/server/grpc/authn/spiffe.go#L57) |
-| 4 | Cluster gate | Is the cluster being deleted? Is it accepted? Is the add-on still enabled? Does the SVID come from the trust domain the cluster is pinned to? | [`spiffe_gate.go`](../../ocm/pkg/server/grpc/spiffe_gate.go#L61) |
-| 5 | SVID check | Is the request about the agent's own cluster, and for an add-on agent its own add-on? Is it a request for a certificate or a token? (Those are always refused.) | [`sar.go`](../../sdk-go/pkg/cloudevents/server/grpc/authz/kube/sar.go#L228) |
+| 4 | Cluster gate | Is the cluster being deleted? Is it accepted? Is the add-on still enabled? Does the SVID come from the trust domain the cluster is pinned to? | [`spiffe_gate.go`](../../ocm/pkg/server/grpc/spiffe_gate.go#L69) |
+| 5 | SVID check | Is the request about the agent's own cluster, and for an add-on agent its own add-on? Is it a request for a certificate or a token? (Those are always refused.) If the cluster is denied, is it about anything but its `ManagedCluster`, lease or events? (Those are refused, whatever the role.) | [`sar.go`](../../sdk-go/pkg/cloudevents/server/grpc/authz/kube/sar.go#L247), [`checkDataType`](../../ocm/pkg/server/grpc/spiffe_gate.go#L118) |
 | 6 | Kubernetes RBAC | The normal permission check on the hub, for the mapped user and groups. | same file |
 | 7 | Expiry check | Is the SVID still valid at this moment? A second check behind the timer of step 2. | [`authn/spiffe.go`](../../sdk-go/pkg/server/grpc/authn/spiffe.go#L88) |
 
@@ -427,7 +427,9 @@ and no token to hand out, because the agents already have their SVIDs.
 1. *Before acceptance.* The cluster already exists: the registration agent created it when it
    joined ([6.2](#62-join-a-cluster)). The registration agent may read its own `ManagedCluster`
    to see when it is accepted. The work agent and the add-on agents are refused at the cluster
-   gate with `cluster <name> is not accepted by the hub`.
+   gate with `cluster <name> is not accepted by the hub`. In the singleton modes the one agent is
+   let in, but its work and add-on requests are refused the same way
+   ([6.6](#66-deny-a-cluster-or-disable-an-add-on)).
 2. *Acceptance.* The hub's controllers give the cluster its permissions, the same as with the
    other drivers: the cluster namespace and the RoleBindings for its agents and add-ons.
 3. *After acceptance.* The registration agent sees `hubAcceptsClient: true`, marks the cluster
@@ -466,7 +468,7 @@ The pin is the annotation `open-cluster-management.io/spiffe-trust-domain` on th
 | Part | Where |
 | --- | --- |
 | Set the pin, keep it on updates | [`pinTrustDomain`](../../ocm/pkg/server/services/cluster/cluster.go#L185), [`cluster.go`](../../ocm/pkg/server/services/cluster/cluster.go#L109) |
-| The gate: acceptance, pin, deletion, add-on | [`clusterGate.check`](../../ocm/pkg/server/grpc/spiffe_gate.go#L61) |
+| The gate: acceptance, pin, deletion, add-on | [`clusterGate.check`](../../ocm/pkg/server/grpc/spiffe_gate.go#L69) |
 | clusteradm | [`spiffeAcceptance`](../../clusteradm/pkg/cmd/accept/spiffe.go#L18) |
 
 **Tests:** [`cluster_spiffe_test.go`](../../ocm/pkg/server/services/cluster/cluster_spiffe_test.go),
@@ -525,7 +527,7 @@ check 5: `system:open-cluster-management:cluster1:work may not act on cluster "c
 | --- | --- |
 | Work agent connection with its SVID | [`work/spoke/spokeagent.go`](../../ocm/pkg/work/spoke/spokeagent.go#L220) |
 | Health check `spiffe-svid` | [`HealthCheckers`](../../ocm/pkg/work/spoke/spokeagent.go#L306) |
-| Own cluster only, no certificates or tokens | [`authorizeSPIFFE`](../../sdk-go/pkg/cloudevents/server/grpc/authz/kube/sar.go#L228) |
+| Own cluster only, no certificates or tokens | [`authorizeSPIFFE`](../../sdk-go/pkg/cloudevents/server/grpc/authz/kube/sar.go#L247) |
 
 **Tests:** [`sar_spiffe_test.go`](../../sdk-go/pkg/cloudevents/server/grpc/authz/kube/sar_spiffe_test.go),
 integration: "the work agent applies ManifestWorks with its own SVID"
@@ -575,7 +577,7 @@ with one-hour SVIDs (`questions.md` Q18).
 
 | Admin action | The hub closes | The gate then refuses |
 | --- | --- | --- |
-| Cluster goes from accepted to denied | all of the cluster's SPIFFE connections | its work agent and add-on agents |
+| Cluster goes from accepted to denied | all of the cluster's SPIFFE connections | its work agent and add-on agents; and from any agent, every request except its `ManagedCluster`, lease and events |
 | Cluster is being deleted | all of the cluster's SPIFFE connections | all of its agents |
 | Add-on is removed from a cluster | only that add-on's connections on that cluster | that add-on's agents |
 
@@ -587,6 +589,11 @@ Other clusters are not affected.
   within seconds. The gate makes the cut stay.
 - *No call to SPIRE.* OCM may contact only the local SPIRE agent, so it can't ask SPIRE to take
   an SVID back. It stops accepting the identity on its own side.
+- *Refused by role, and by what is asked.* The gate runs before the request is read, so it can
+  only refuse by the role in the SVID. In the singleton modes one agent, with one SVID, is both
+  the registration and the work agent, so the gate has to let it in. A second check runs once
+  the request is read and refuses a denied cluster's work and add-on requests whatever the role,
+  so the singleton agent gets no work either.
 - *The registration agent keeps basic access when a cluster is denied.* It has to see when the
   cluster is accepted again.
 - *A new cluster is not cut off.* It was never accepted, and it still has to create its
@@ -596,8 +603,10 @@ Other clusters are not affected.
 [`addOnRevocationHandler`](../../ocm/pkg/server/grpc/revocation.go#L52),
 [`CloseCluster`](../../sdk-go/pkg/server/grpc/spiffe/registry.go#L107),
 [`CloseAddOn`](../../sdk-go/pkg/server/grpc/spiffe/registry.go#L116),
-[`clusterGate.check`](../../ocm/pkg/server/grpc/spiffe_gate.go#L61),
-[`checkAddOn`](../../ocm/pkg/server/grpc/spiffe_gate.go#L98).
+[`clusterGate.check`](../../ocm/pkg/server/grpc/spiffe_gate.go#L69),
+[`checkAddOn`](../../ocm/pkg/server/grpc/spiffe_gate.go#L137),
+[`checkDataType`](../../ocm/pkg/server/grpc/spiffe_gate.go#L118),
+[`WithSPIFFECheck`](../../sdk-go/pkg/cloudevents/server/grpc/authz/kube/sar.go#L84).
 
 **Tests:** [`revocation_test.go`](../../ocm/pkg/server/grpc/revocation_test.go),
 [`spiffe_gate_test.go`](../../ocm/pkg/server/grpc/spiffe_gate_test.go), integration: "is cut off
@@ -610,8 +619,11 @@ permissions. But the hub keeps one permission for the work agent, so it reconnec
 receiving work. The gate now refuses the work agent and add-on agents of a cluster that is not
 accepted (ocm `2bdd76cff`).
 
-**Known limit:** in `Singleton` mode the one agent has a single SVID for registration and work,
-so the gate can't refuse only its work part while the cluster is denied (`questions.md` Q19).
+**Found in review:** in the singleton modes the one agent kept receiving work while its cluster
+was denied: the gate let it in as the registration agent, and RBAC still allowed work. The hub
+now also refuses a denied cluster's requests by their data type: only its `ManagedCluster`, lease
+and events are allowed (sdk-go `284a8c71`, ocm `05f6b541b`). e2e `check-deny.sh` passes for
+`Singleton`, `Hosted` and `SingletonHosted`.
 
 ### 6.7 Delete a cluster
 
@@ -857,7 +869,7 @@ named, and one trusted SPIRE must not be able to act for another's cluster.
 **Code:** [`authorizeMemberOfAny`](../../sdk-go/pkg/server/grpc/spiffe/credentials.go#L36),
 [`GetAgentTrustDomains`](../../api/operator/v1/funcs_clustermanager.go#L15),
 [`CloseTrustDomain`](../../sdk-go/pkg/server/grpc/spiffe/registry.go#L128),
-[`clusterGate.check`](../../ocm/pkg/server/grpc/spiffe_gate.go#L61).
+[`clusterGate.check`](../../ocm/pkg/server/grpc/spiffe_gate.go#L69).
 
 **Tests:** federation case in
 [`spiffeoptions_test.go`](../../sdk-go/pkg/cloudevents/generic/options/grpc/spiffeoptions_test.go)
@@ -1056,7 +1068,7 @@ objects applied on the managed cluster.
 | Cluster pinned to the trust domain | pass | pass | pass | pass |
 | `ManifestWork` applied, on the right cluster | pass | pass | pass | pass |
 | Rotation under load (2 minute SVIDs) | nothing lost | | | |
-| Cluster deny | pass | | | |
+| Cluster deny | pass | pass | pass | pass |
 | Cluster delete: guard holds and releases on time | pass | | | |
 | `exec` into an agent refused | pass | pass | pass | |
 | Tampered policy: recovery for that Klusterlet only | | | pass (6 s) | |
@@ -1098,7 +1110,7 @@ that failed before the agent had started (ocm `9b2cd94bd`) and the wrong order i
 | [`pkg/spiffe`](../../sdk-go/pkg/spiffe/source.go) | Pick the SVID by ID. | `70c882fc` |
 | [`pkg/cloudevents/generic/options/grpc`](../../sdk-go/pkg/cloudevents/generic/options/grpc/spiffeoptions.go) | The agent's connection options. | `70c882fc` |
 | [`pkg/server/grpc`](../../sdk-go/pkg/server/grpc/server.go), [`pkg/server/grpc/spiffe`](../../sdk-go/pkg/server/grpc/spiffe/) | Server can take other credentials; SPIFFE credentials; connection registry. | `0ece0894` |
-| [`pkg/cloudevents/server/grpc/authz/kube`](../../sdk-go/pkg/cloudevents/server/grpc/authz/kube/sar.go) | The SVID check on every event. | `5b1570dc` |
+| [`pkg/cloudevents/server/grpc/authz/kube`](../../sdk-go/pkg/cloudevents/server/grpc/authz/kube/sar.go) | The SVID check on every event, and the hook for the hub's data-type check. | `5b1570dc`, `284a8c71` |
 
 go-spiffe is version 2.9.0. Version 2.6.0 has a data race that the tests found.
 
@@ -1106,7 +1118,7 @@ go-spiffe is version 2.9.0. Version 2.6.0 has a data race that the tests found.
 
 | Area | Files | Commits |
 | --- | --- | --- |
-| Hub: listener, gate, revocation | [`pkg/server/grpc/`](../../ocm/pkg/server/grpc/): `spiffe_listener.go`, `spiffe_gate.go`, `revocation.go`, `options.go` | `b851cf545`, `fa5a75dd2`, `2bdd76cff` |
+| Hub: listener, gate, revocation | [`pkg/server/grpc/`](../../ocm/pkg/server/grpc/): `spiffe_listener.go`, `spiffe_gate.go`, `revocation.go`, `options.go` | `b851cf545`, `fa5a75dd2`, `2bdd76cff`, `05f6b541b` |
 | Hub: pinning | [`pkg/server/services/cluster/cluster.go`](../../ocm/pkg/server/services/cluster/cluster.go) | `133cd8a7f` |
 | Hub: delete guard | [`pkg/registration/hub/spiffe/deleteguard.go`](../../ocm/pkg/registration/hub/spiffe/deleteguard.go), `pkg/registration/hub/manager.go` | `cf7c46fb3` |
 | Hub: operator | [`pkg/operator/operators/clustermanager/`](../../ocm/pkg/operator/operators/clustermanager/controllers/clustermanagercontroller/), `pkg/operator/helpers/helpers.go`, `manifests/cluster-manager/` | `6c7c8448a`, `e0e5db5b7` |
@@ -1132,7 +1144,7 @@ go-spiffe is version 2.9.0. Version 2.6.0 has a data race that the tests found.
 | --- | --- |
 | **Day 29:** run the Default-mode lifecycle on the AKS clusters, and confirm what the design assumes about a managed platform (for example, that the built-in controllers use their own ServiceAccounts). | Not started. |
 | **Day 30:** full checks in every repository, rebase, open the pull requests in order (`api`, `sdk-go`, `addon-framework`, `ocm`, `clusteradm`), update the proposal. | Not started. |
-| Push the branches | `api` and `sdk-go` (up to `7541964e`) are on the fork. sdk-go `5b1570dc`, and all of `ocm`, `addon-framework` and `clusteradm`, are local only. |
+| Push the branches | `api` and `sdk-go` (up to `7541964e`) are on the fork. sdk-go `5b1570dc` and `284a8c71`, and all of `ocm`, `addon-framework` and `clusteradm`, are local only. |
 | Replace lines | The repositories point at each other with temporary `replace` lines in `go.mod`. They must point at pushed commits before the pull requests. |
 | Draft pull requests | None opened yet. |
 | e2e checks not run | See [7.3](#73-end-to-end-tests). |
@@ -1148,7 +1160,6 @@ go-spiffe is version 2.9.0. Version 2.6.0 has a data race that the tests found.
 | Q15 | In the hosted modes, a Secret with the kubeconfig of the managed cluster still exists on the management cluster. It is not a hub credential and every driver needs it. Is that in scope of "no long-lived secrets"? |
 | Q17 | Migration from `grpc` itself is not tested (the test uses `csr`). |
 | Q18 | With SVIDs under 10 minutes, updates can be up to about a minute late after a reconnect. A change to the client's reconnect wait in `sdk-go` is proposed. |
-| Q19 | In `Singleton` mode, the gate can't refuse only the work part of a denied cluster's agent. |
 | Q20 | In the hosted modes, policies on the managed cluster are checked only every five minutes. |
 
 Details are in [`../questions.md`](../questions.md).

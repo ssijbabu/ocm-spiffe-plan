@@ -139,10 +139,14 @@ Tests: ocm registration integration 105/105 earlier, SPIFFE specs pass; add-on i
       reconnect. In e2e with a 2m TTL one ManifestWork update arrived 42s late (nothing was lost).
       With 1h SVIDs it doesn't happen. Proposal for sdk-go: don't count a close at SVID expiry (or
       after a connection that lived longer than its first backoff step) as a failure.
-- [ ] Q19 (Day 27): the gate refuses the work and add-on agents of a denied cluster, but the
+- [x] Q19 (Day 27): the gate refuses the work and add-on agents of a denied cluster, but the
       singleton agent has one SVID for registration and work, so it keeps the work RoleBinding's
       access while denied (as the CSR driver's certificate does today). Refusing it needs the
       gate to look at each event's data type. Decide in review.
+      **Fixed (2026-11-14):** the gate gives the SAR authorizer a check that sees the data type;
+      a denied cluster may only use its ManagedCluster, lease and events, whatever the role
+      (sdk-go `284a8c71`, ocm `05f6b541b`). e2e deny passes for Singleton, Hosted and
+      SingletonHosted.
 - [ ] Q20 (Day 28): the operator watches admission policies only on the cluster it runs on. In
       Hosted modes the add-on and namespace label policies on the managed cluster are checked at
       the 5-minute resync only.
